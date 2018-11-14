@@ -1,0 +1,21 @@
+----------------------------------------------------------------01
+$> mkdir testdir
+
+$> cd testdir
+
+$> pwd
+.../testdir
+
+----------------------------------------------------------------02
+$> touch "my file with whitespaces in name.txt"
+
+$> ls
+my file with whitespaces in name.txt
+
+$> echo '123 456 \" str \"'
+123 456 \" str \"
+
+$> echo '123 456 \" str \"' > "my file with whitespaces in name.txt"
+
+$> cat my\ file\ with\ whitespaces\ in\ name.txt 
+123 456 \" str \"
