@@ -17,5 +17,66 @@ $> echo '123 456 \" str \"'
 
 $> echo '123 456 \" str \"' > "my file with whitespaces in name.txt"
 
-$> cat my\ file\ with\ whitespaces\ in\ name.txt 
+$> cat my\ file\ with\ whitespaces\ in\ name.txt
 123 456 \" str \"
+
+$> echo "test" >> "my file with whitespaces in name.txt"
+
+$> cat "my file with whitespaces in name.txt"
+123 456 \" str \"
+test
+
+$> echo 'truncate' > "my file with whitespaces in name.txt"
+
+$> cat "my file with whitespaces in name.txt"
+truncate
+
+$> echo "test 'test'' \\" >> "my file with whitespaces in name.txt"
+
+$> cat "my file with whitespaces in name.txt"
+truncate
+test 'test'' \
+
+----------------------------------------------------------------03
+
+$> cat << EOF > test.txt
+sef
+aqdqw
+  EOF   
+ EOF
+EOF 
+qwdeqw
+EOF
+
+$> cat test.txt
+sef
+aqdqw
+  EOF   
+ EOF
+EOF 
+qwdeqw
+
+----------------------------------------------------------------04
+
+$> # Comment
+
+$> echo 123\
+456
+
+123456
+
+----------------------------------------------------------------05
+
+$> false && echo 123
+
+$> true && echo 123
+123
+
+$> true || false && echo 123
+123
+
+$> true || false || true && echo 123
+123
+
+$> false || echo 123
+123
