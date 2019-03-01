@@ -6,6 +6,9 @@ $> cd testdir
 $> pwd
 .../testdir
 
+$>   pwd
+.../testdir
+
 ----------------------------------------------------------------02
 $> touch "my file with whitespaces in name.txt"
 
