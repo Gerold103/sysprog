@@ -15,9 +15,10 @@ main()
 	int id = shmget(key, 1024, IPC_CREAT | S_IRWXU | S_IRWXO);
 	printf("created mem with id %d\n", id);
 	char *mem = shmat(id, NULL, 0);
+	int align = __alignof__(pthread_mutex_t);
 	pthread_mutex_t *mutex = (pthread_mutex_t *)
-		(mem + ((long)mem % __alignof__(pthread_mutex_t)));
-	char *data = (char *) mutex + sizeof(*mutex);
+		(mem + align - mem % align);
+	volatile char *data = (char *) mutex + sizeof(*mutex);
 	*data = 0;
 	pthread_mutexattr_t attr;
 	pthread_mutexattr_init(&attr);
