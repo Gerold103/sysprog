@@ -17,7 +17,7 @@ main()
 	printf("Socket types: dgram = %d, stream = %d, raw = %d\n", SOCK_DGRAM,
 	       SOCK_STREAM, SOCK_RAW);
 	printf("Protocols: tcp = %d, udp = %d\n\n", IPPROTO_TCP, IPPROTO_UDP);
-	for (iter = addr; iter = iter->ai_next; iter != NULL) {
+	for (iter = addr; iter != NULL; iter = iter->ai_next) {
 		printf("family = %d, socktype = %d, protocol = %d",
 		       iter->ai_family, iter->ai_socktype, iter->ai_protocol);
 		if (iter->ai_family == AF_INET) {
