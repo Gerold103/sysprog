@@ -65,8 +65,10 @@ my_coroutine()
 int
 main(int argc, char **argv)
 {
-	for (int i = 0; i < coro_count; ++i)
-		coro_init(&coros[i]);
+	for (int i = 0; i < coro_count; ++i) {
+		if (coro_init(&coros[i]) != 0)
+			break;
+	}
 	coro_call(my_coroutine);
 	printf("Finished\n");
 	return 0;

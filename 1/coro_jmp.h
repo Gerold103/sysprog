@@ -113,10 +113,10 @@ static int curr_coro_i = 0;
 /** Initialize a coroutine. */
 #define coro_init(coro) ({					\
 	(coro)->is_finished = false;				\
-	setjmp((coro)->exec_point);				\
 	(coro)->ret_count = 0;					\
 	(coro)->ret_capacity = 0;				\
 	(coro)->ret_points = NULL;				\
+	setjmp((coro)->exec_point);				\
 })
 
 /**
