@@ -1,0 +1,41 @@
+--------------------------------Section 1
+$> mkdir testdir
+$> cd testdir
+$> pwd | tail -c 8
+testdir
+$>    pwd | tail -c 8
+testdir
+--------------------------------Section 2
+$> touch my file with whitespaces in name.txt
+$> ls
+my file with whitespaces in name.txt
+$> echo '123 456  str '
+123 456 " str "
+$> echo '123 456  str ' > my file with whitespaces in name.txt
+$> cat my\ file\ with\ whitespaces\ in\ name.txt
+123 456 " str "
+$> echo test >> my file with whitespaces in name.txt
+$> cat my file with whitespaces in name.txt
+123 456 " str "
+test
+$> echo 'truncate' > my file with whitespaces in name.txt
+$> cat my file with whitespaces in name.txt
+truncate
+$> cat my file with whitespaces in name.txt
+truncate
+$> echo test test \" >> "my file with whitespaces in name.txt""
+echo "test test "
+--------------------------------Section 3
+$> # Comment
+$> echo 123456
+123456
+--------------------------------Section 4
+$> false && echo 123
+$> true && echo 123
+123
+$> true || false && echo 123
+123
+$> true || false || true && echo 123
+123
+$> false || echo 123
+123
