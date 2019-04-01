@@ -29,3 +29,21 @@ test 'test'' \
 $> Test 1
 $> Test 2
 123456
+--------------------------------Section 4
+$> Test 1
+$> Test 2
+123
+$> Test 3
+123456
+$> Test 4
+456
+$> Test 5
+destination string
+$> Test 6
+destination value
+$> Test 7
+destination value
+$> Test 8
+$> Test 9
+$> Test 10
+destination value

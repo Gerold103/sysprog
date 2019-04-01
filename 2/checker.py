@@ -42,6 +42,18 @@ tests = [
 "echo 123\\\n456",
 ],
 [
+"rm my\\ file\\ with\\ whitespaces\\ in\\ name.txt",
+"echo 123 | grep 2",
+"echo 123\\\n456\\\n| grep 2",
+"echo \"123\n456\n7\n\" | grep 4",
+"echo 'source string' | sed 's/source/destination/g'",
+"echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g'",
+"echo 'source string' |\\\nsed 's/source/destination/g'\\\n| sed 's/string/value/g'",
+"echo 'test' | exit 123 | grep 'test2'",
+"echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g' > result.txt",
+"cat result.txt",
+],
+[
 "false && echo 123",
 "true && echo 123",
 "true || false && echo 123",
@@ -57,7 +69,7 @@ def finish(code):
 prefix = '--------------------------------'
 command = ''
 for section_i, section in enumerate(tests, 1):
-	if section_i == 4 and args.max == 15:
+	if section_i == 5 and args.max == 15:
 		break
 	command += 'echo "{}Section {}"\n'.format(prefix, section_i)
 	for test_i, test in enumerate(section, 1):

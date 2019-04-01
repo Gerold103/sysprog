@@ -51,6 +51,42 @@ $> echo 123\
 
 ----------------------------------------------------------------04
 
+$> rm my\ file\ with\ whitespaces\ in\ name.txt
+
+$> echo 123 | grep 2
+123
+
+$> echo 123\
+456\
+| grep 2
+123456
+
+$> echo "123
+456
+7
+" | grep 4
+456
+
+$> echo 'source string' | sed 's/source/destination/g'
+destination string
+
+$> echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g'
+destination value
+
+$> echo 'source string' |\
+sed 's/source/destination/g'\
+| sed 's/string/value/g'
+destination value
+
+$> echo 'test' | exit 123 | grep 'test'
+
+$> echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g' > result.txt
+
+$> cat result.txt
+destination value
+
+----------------------------------------------------------------05
+
 $> false && echo 123
 
 $> true && echo 123
