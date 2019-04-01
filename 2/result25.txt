@@ -1,41 +1,41 @@
 --------------------------------Section 1
-$> mkdir testdir
-$> cd testdir
-$> pwd | tail -c 8
+$> Test 1
+$> Test 2
+$> Test 3
 testdir
-$>    pwd | tail -c 8
+$> Test 4
 testdir
 --------------------------------Section 2
-$> touch my file with whitespaces in name.txt
-$> ls
+$> Test 1
+$> Test 2
 my file with whitespaces in name.txt
-$> echo '123 456  str '
+$> Test 3
 123 456 " str "
-$> echo '123 456  str ' > my file with whitespaces in name.txt
-$> cat my\ file\ with\ whitespaces\ in\ name.txt
+$> Test 4
+$> Test 5
 123 456 " str "
-$> echo test >> my file with whitespaces in name.txt
-$> cat my file with whitespaces in name.txt
+$> Test 6
+$> Test 7
 123 456 " str "
 test
-$> echo 'truncate' > my file with whitespaces in name.txt
-$> cat my file with whitespaces in name.txt
+$> Test 8
+$> Test 9
 truncate
-$> cat my file with whitespaces in name.txt
+$> Test 10
+$> Test 11
 truncate
-$> echo test test \" >> "my file with whitespaces in name.txt""
-echo "test test "
+test 'test'' \
 --------------------------------Section 3
-$> # Comment
-$> echo 123456
+$> Test 1
+$> Test 2
 123456
 --------------------------------Section 4
-$> false && echo 123
-$> true && echo 123
+$> Test 1
+$> Test 2
 123
-$> true || false && echo 123
+$> Test 3
 123
-$> true || false || true && echo 123
+$> Test 4
 123
-$> false || echo 123
+$> Test 5
 123
