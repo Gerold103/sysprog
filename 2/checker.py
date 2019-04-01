@@ -64,7 +64,12 @@ for section_i, section in enumerate(tests, 1):
 		command += 'echo "$> Test {}"\n'.format(test_i)
 		command += '{}\n'.format(test)
 
-output = p.communicate(command.encode())[0].decode()
+try:
+	output = p.communicate(command.encode(), 3)[0].decode()
+except subprocess.TimeoutExpired:
+	print('Too long no output. Probably you forgot to process EOF')
+	finish(-1)
+
 if args.t:
 	print(output)
 	finish(0)
