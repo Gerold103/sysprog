@@ -59,6 +59,11 @@ tests = [
 "true || false && echo 123",
 "true || false || true && echo 123",
 "false || echo 123"
+],
+[
+"sleep 0.5 && echo 'back sleep is done' &",
+"echo 'next sleep is done'",
+"sleep 0.5",
 ]
 ]
 
@@ -70,6 +75,8 @@ prefix = '--------------------------------'
 command = ''
 for section_i, section in enumerate(tests, 1):
 	if section_i == 5 and args.max == 15:
+		break
+	if section_i == 6 and args.max != 25:
 		break
 	command += 'echo "{}Section {}"\n'.format(prefix, section_i)
 	for test_i, test in enumerate(section, 1):

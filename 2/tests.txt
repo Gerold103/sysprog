@@ -100,3 +100,13 @@ $> true || false || true && echo 123
 
 $> false || echo 123
 123
+
+----------------------------------------------------------------06
+
+$> sleep 0.5 && echo 'back sleep is done' &
+
+$> echo 'next sleep is done'
+next sleep is done
+
+$> sleep 0.5
+back sleep is done

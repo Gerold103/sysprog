@@ -57,3 +57,9 @@ $> Test 4
 123
 $> Test 5
 123
+--------------------------------Section 6
+$> Test 1
+$> Test 2
+next sleep is done
+$> Test 3
+back sleep is done
