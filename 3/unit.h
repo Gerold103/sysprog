@@ -1,0 +1,36 @@
+#ifndef UNIT_TEST_H
+#define UNIT_TEST_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define unit_test_start() \
+	printf("\t-------- %s started --------\n", __func__)
+
+#define unit_test_finish() \
+	printf("\t-------- %s done --------\n", __func__)
+
+#define unit_fail_if(cond) ({						\
+	if (cond) {							\
+		printf("Test failed, line %d\n", __LINE__);		\
+		exit(-1);						\
+	}								\
+})
+
+#define unit_msg(...) ({						\
+	printf("# ");							\
+	printf(__VA_ARGS__);						\
+	printf("\n");							\
+})
+
+#define unit_check(cond, msg) ({					\
+	if (! (cond)) {							\
+		printf("not ok - %s\n", (msg));				\
+		unit_fail_if(true);					\
+	} else {							\
+		printf("ok - %s\n", (msg));				\
+	}								\
+})
+
+#endif
