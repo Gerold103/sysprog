@@ -1,4 +1,5 @@
 #include "userfs.h"
+#include <stddef.h>
 
 enum {
 	BLOCK_SIZE = 512,
@@ -6,7 +7,7 @@ enum {
 };
 
 /** Global error code. Set from any function on any error. */
-static enum ufs_errno_code ufs_errno = UFS_ERR_NO_ERR;
+static enum ufs_error_code ufs_error_code = UFS_ERR_NO_ERR;
 
 struct block {
 	/** Block memory. */
@@ -62,29 +63,45 @@ static int file_descriptor_capacity = 0;
 enum ufs_error_code
 ufs_errno()
 {
-	return ufs_errno;
+	return ufs_error_code;
 }
 
 int
 ufs_open(const char *filename, int flags)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
+	return -1;
 }
 
 ssize_t
 ufs_write(int fd, const char *buf, size_t size)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
+	return -1;
 }
 
 ssize_t
 ufs_read(int fd, char *buf, size_t size)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
+	return -1;
 }
 
 int
 ufs_close(int fd)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
+	return -1;
+}
+
+int
+ufs_delete(const char *filename)
+{
+	/* IMPLEMENT THIS FUNCTION */
+	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
+	return -1;
 }

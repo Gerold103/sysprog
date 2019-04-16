@@ -1,3 +1,5 @@
+#include <sys/types.h>
+
 /**
  * User-defined in-memory filesystem. It is as simple as possible.
  * Each file lies in the memory as an array of blocks. A file
@@ -21,6 +23,7 @@ enum ufs_error_code {
 	UFS_ERR_NO_ERR = 0,
 	UFS_ERR_NO_FILE,
 	UFS_ERR_NO_MEM,
+	UFS_ERR_NOT_IMPLEMENTED,
 };
 
 /** Get code of the last error. */
