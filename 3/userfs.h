@@ -79,7 +79,13 @@ int
 ufs_close(int fd);
 
 /**
- * Delete a file by its name.
+ * Delete a file by its name. Note, that it is allowed to drop the
+ * file even if there are opened descriptors. In such a case the
+ * file content will live until the last descriptor is closed. If
+ * the file is deleted, it is allowed to create a new one with the
+ * same name immediately and it should not affect existing opened
+ * descriptors of the deleted file.
+ *
  * @param filename Name of a file to delete.
  * @retval -1 Error occured. Check ufs_errno() for a code.
  *     - UFS_ERR_NO_FILE - no such file.
