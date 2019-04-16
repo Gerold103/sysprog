@@ -4,7 +4,7 @@
  * User-defined in-memory filesystem. It is as simple as possible.
  * Each file lies in the memory as an array of blocks. A file
  * has an unique file name, and there are no directories, so the
- * FS is a monolite flat contiguous folder.
+ * FS is a monolithic flat contiguous folder.
  */
 
 /**
@@ -60,7 +60,7 @@ ufs_errno();
  * @param flags Bitwise combination of open_flags.
  *
  * @retval > 0 File descriptor.
- * @retval -1 Error occured. Check ufs_errno() for a code.
+ * @retval -1 Error occurred. Check ufs_errno() for a code.
  *     - UFS_ERR_NO_FILE - no such file, and UFS_CREATE flag is
  *       not specified.
  */
@@ -74,7 +74,7 @@ ufs_open(const char *filename, int flags);
  * @param size Size of @a buf.
  *
  * @retval > 0 How many bytes were written.
- * @retval -1 Error occured. Check ufs_errno() for a code.
+ * @retval -1 Error occurred. Check ufs_errno() for a code.
  *     - UFS_ERR_NO_FILE - invalid file descriptor.
  *     - UFS_ERR_NO_MEM - not enough memory.
  */
@@ -89,7 +89,7 @@ ufs_write(int fd, const char *buf, size_t size);
  *
  * @retval > 0 How many bytes were read.
  * @retval 0 EOF.
- * @retval -1 Error occured. Check ufs_errno() for a code.
+ * @retval -1 Error occurred. Check ufs_errno() for a code.
  *     - UFS_ERR_NO_FILE - invalid file descriptor.
  */
 ssize_t
@@ -99,7 +99,7 @@ ufs_read(int fd, char *buf, size_t size);
  * Close a file.
  * @param fd File descriptor from ufs_open().
  * @retval 0 Success.
- * @retval -1 Error occured. Check ufs_errno() for a code.
+ * @retval -1 Error occurred. Check ufs_errno() for a code.
  *     - UFS_ERR_NO_FILE - invalid file descriptor.
  */
 int
@@ -114,7 +114,7 @@ ufs_close(int fd);
  * descriptors of the deleted file.
  *
  * @param filename Name of a file to delete.
- * @retval -1 Error occured. Check ufs_errno() for a code.
+ * @retval -1 Error occurred. Check ufs_errno() for a code.
  *     - UFS_ERR_NO_FILE - no such file.
  */
 int
