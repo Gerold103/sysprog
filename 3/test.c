@@ -181,6 +181,44 @@ test_delete(void)
 }
 
 static void
+test_max_file_size(void)
+{
+	unit_test_start();
+
+	int fd = ufs_open("file", UFS_CREATE);
+	unit_fail_if(fd == -1);
+
+	int buf_size = 1024 * 1024;
+	char *buf = (char *) malloc(buf_size);
+	for (int i = 0; i < buf_size; ++i)
+		buf[i] = 'a' + i % 26;
+	for (int i = 0; i < 1024; ++i) {
+		ssize_t rc = ufs_write(fd, buf, buf_size);
+		unit_fail_if(rc != buf_size);
+	}
+	unit_check(ufs_write(fd, "a", 1) == -1,
+		   "can not write over max file size");
+	unit_check(ufs_errno() == UFS_ERR_NO_MEM, "errno is set");
+
+	unit_fail_if(ufs_close(fd) != 0);
+	fd = ufs_open("file", 0);
+	unit_fail_if(fd == -1);
+	char *buf2 = (char *) malloc(buf_size);
+	for (int i = 0; i < 1014; ++i) {
+		ssize_t rc = ufs_read(fd, buf2, buf_size);
+		unit_fail_if(rc != buf_size);
+		unit_fail_if(memcmp(buf2, buf, buf_size) != 0);
+	}
+	free(buf2);
+	free(buf);
+	unit_msg("read works");
+	unit_fail_if(ufs_close(fd) == -1);
+	unit_fail_if(ufs_delete("file") == -1);
+
+	unit_test_finish();
+}
+
+static void
 test_rights(void)
 {
 #ifdef NEED_OPEN_FLAGS
@@ -247,6 +285,7 @@ main(void)
 	test_io();
 	test_delete();
 	test_stress_open();
+	test_max_file_size();
 	test_rights();
 
 	unit_test_finish();
