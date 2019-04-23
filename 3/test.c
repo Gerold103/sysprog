@@ -146,6 +146,12 @@ test_delete(void)
 
 	unit_check(ufs_delete("file") == 0,
 		   "delete when opened descriptors exist");
+
+	int tmp = ufs_open("tmp", UFS_CREATE);
+	unit_fail_if(tmp == -1);
+	unit_fail_if(ufs_write(tmp, "hhhhh", 5) != 5);
+	ufs_close(tmp);
+
 	unit_check(ufs_write(fd2, "a", 1) == 1,
 		   "write into an fd opened before deletion");
 	unit_check(ufs_read(fd3, &c1, 1) == 1,
@@ -176,6 +182,8 @@ test_delete(void)
 	unit_fail_if(ufs_close(fd2) != 0);
 	unit_fail_if(ufs_close(fd3) != 0);
 	unit_fail_if(ufs_close(fd4) != 0);
+
+	unit_fail_if(ufs_delete("tmp") != 0);
 
 	unit_test_finish();
 }
