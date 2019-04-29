@@ -283,6 +283,39 @@ test_rights(void)
 #endif
 }
 
+static void
+test_resize(void)
+{
+#ifdef NEED_RESIZE
+	unit_test_start();
+
+	int fd = ufs_open("file", UFS_CREATE);
+	unit_fail_if(fd == -1);
+	char buffer[2048];
+	memset(buffer, 'a', sizeof(buffer));
+	ssize_t rc = ufs_write(fd, buffer, sizeof(buffer));
+	unit_fail_if(rc != sizeof(buffer));
+	int new_size = 23;
+	rc = ufs_resize(fd, new_size);
+	unit_check(rc == 0, "shrink to smaller size");
+
+	int fd2 = ufs_open("file2", UFS_CREATE);
+	unit_fail_if(fd2 == -1);
+	rc = ufs_write(fd2, "123", 3);
+	unit_fail_if(rc != 3);
+	unit_fail_if(ufs_close(fd2) != 0);
+	unit_fail_if(ufs_delete("file2") != 0);
+
+	rc = ufs_write(fd, buffer, sizeof(buffer));
+	unit_check(rc == sizeof(buffer),
+		   "opened descriptor beyond new border still works");
+	unit_fail_if(ufs_close(fd) != 0);
+	unit_fail_if(ufs_delete("file") != 0);
+
+	unit_test_finish();
+#endif
+}
+
 int
 main(void)
 {
@@ -295,6 +328,7 @@ main(void)
 	test_stress_open();
 	test_max_file_size();
 	test_rights();
+	test_resize();
 
 	unit_test_finish();
 	return 0;
