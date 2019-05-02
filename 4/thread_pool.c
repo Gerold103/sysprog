@@ -18,52 +18,61 @@ int
 thread_pool_new(int max_thread_count, struct thread_pool **pool)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
 int
 thread_pool_thread_count(const struct thread_pool *pool)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
 int
 thread_pool_delete(struct thread_pool *pool)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
 int
 thread_pool_push_task(struct thread_pool *pool, struct thread_task *task)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
 int
 thread_task_new(struct thread_task **task, thread_task_f function, void *arg)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
 bool
 thread_task_is_finished(const struct thread_task *task)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	return false;
 }
 
 bool
 thread_task_is_running(const struct thread_task *task)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	return false;
 }
 
 int
 thread_task_join(struct thread_task *task, void **result)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
 int
 thread_task_delete(struct thread_task *task)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	return TPOOL_ERR_NOT_IMPLEMENTED;
 }

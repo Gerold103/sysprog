@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #ifndef THREAD_POOL_DEFINED
 #define THREAD_POOL_DEFINED
 
@@ -17,6 +18,7 @@ enum thread_poool_errcode {
 	TPOOL_ERR_HAS_TASKS,
 	TPOOL_ERR_TASK_NOT_PUSHED,
 	TPOOL_ERR_TASK_IN_POOL,
+	TPOOL_ERR_NOT_IMPLEMENTED,
 };
 
 /** Thread pool API. */
