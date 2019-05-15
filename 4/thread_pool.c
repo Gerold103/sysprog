@@ -76,3 +76,14 @@ thread_task_delete(struct thread_task *task)
 	/* IMPLEMENT THIS FUNCTION */
 	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
+
+#ifdef NEED_DETACH
+
+int
+thread_task_detach(struct thread_task *task)
+{
+	/* IMPLEMENT THIS FUNCTION */
+	return TPOOL_ERR_NOT_IMPLEMENTED;
+}
+
+#endif

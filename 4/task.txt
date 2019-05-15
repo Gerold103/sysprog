@@ -53,23 +53,11 @@ include "thread_pool.h" и в функции main делает какие-то �
 
 Варианты решения:
 
-- 10 баллов: реализовать все функции из thread_pool.h, как описано
+- 15 баллов: реализовать все функции из thread_pool.h, как описано
   выше и в самом файле.
 
-- +5 баллов: реализовать функцию detach:
-
-  /**
-   * Detach a task so as to auto-delete it when it is finished.
-   * After detach a task can not be accessed via any functions.
-   * If it is already finished, then just delete it.
-   * @param task Task to detach.
-   * @retval 0 Success.
-   * @retval != Error code.
-   *     - TPOOL_ERR_TASK_NOT_PUSHED - task is not pushed to a
-   *       pool.
-   */
-  int
-  thread_task_detach(struct thread_task *task);
+- +5 баллов: реализовать функцию detach. В thread_pool.h уже
+  определена функция detach под макросом NEED_DETACH.
 
 - +5 баллов: реализовать таймаут для thread_task_join():
 

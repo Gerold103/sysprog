@@ -1,5 +1,6 @@
 #include "thread_pool.h"
 #include "unit.h"
+#include <pthread.h>
 
 static void
 test_new(void)
@@ -59,8 +60,50 @@ test_push(void)
 		   "can't delete before join");
 	unit_check(thread_task_join(t, &result) == 0, "joined");
 	unit_check(result == &arg && arg == 1, "the task really did something");
+
+	unit_check(thread_pool_thread_count(p) == 1, "one active thread");
+	unit_check(thread_pool_push_task(p, t) == 0, "pushed again");
+	unit_check(thread_task_join(t, &result) == 0, "joined");
+	unit_check(thread_pool_thread_count(p) == 1, "still one active thread");
 	unit_check(thread_task_delete(t) == 0, "deleted after join");
+
 	unit_fail_if(thread_pool_delete(p) != 0);
+
+	unit_test_finish();
+}
+
+static void *
+task_lock_unlock_f(void *arg)
+{
+	pthread_mutex_t *m = (pthread_mutex_t *) arg;
+	pthread_mutex_lock(m);
+	pthread_mutex_unlock(m);
+	return arg;
+}
+
+static void
+test_thread_pool_delete(void)
+{
+	unit_test_start();
+
+	void *result;
+	struct thread_pool *p;
+	struct thread_task *t;
+	pthread_mutex_t m;
+	pthread_mutex_init(&m, NULL);
+	unit_fail_if(thread_pool_new(3, &p) != 0);
+	unit_fail_if(thread_task_new(&t, task_lock_unlock_f, &m) != 0);
+
+	pthread_mutex_lock(&m);
+	unit_fail_if(thread_pool_push_task(p, t) != 0);
+	unit_check(thread_pool_delete(p) == TPOOL_ERR_HAS_TASKS, "delete does "\
+		   "not work until there are not finished tasks");
+	pthread_mutex_unlock(&m);
+	unit_fail_if(thread_task_join(t, &result) != 0);
+	unit_fail_if(thread_task_delete(t) != 0);
+
+	unit_check(thread_pool_delete(p) == 0, "now delete works");
+	pthread_mutex_destroy(&m);
 
 	unit_test_finish();
 }
@@ -72,6 +115,7 @@ main(void)
 
 	test_new();
 	test_push();
+	test_thread_pool_delete();
 
 	unit_test_finish();
 	return 0;
