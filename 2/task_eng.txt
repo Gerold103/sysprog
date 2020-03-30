@@ -1,0 +1,98 @@
+------------------------------------------------------------------
+Shell.
+Language: С.
+Deadline: 2 weeks.
+------------------------------------------------------------------
+
+You need to implement a simplified version of a command line
+console. It should take lines like this:
+
+    > command_name param1 param2 ...
+
+and execute them by calling 'command_name' with the given
+parameters. So be a terminal, basically. The program should
+correctly handle quoted strings even if there are whitespaces
+inside it. And you need to handle comments (by trimming them).
+
+Besides, the console should support pipes expressed as symbol '|',
+and output redirection using '>' and '>>'.
+
+Length of command line input is not limited, so you can't read it
+into a buffer of a fixed size.
+
+The program should print all the same what would be printed by a
+real terminal.
+
+It is forbidden to use functions like system(), popen() or use any
+other way to access existing terminal-like read-to-use functions.
+
+You need to use functions pipe(), dup/dup2(), fork(), wait, open,
+close, at least one of execl/execle/execlp/execv/execvp/execvP.
+
+Input examples:
+
+* Print process list and find 'init' string in them:
+
+    > ps aux | grep init
+
+* Execute code in python and search a string in its output:
+
+    > echo "print('result is ', 123 + 456)" | python -i | grep result
+
+* Print escaped quote into a file and print it:
+
+    > echo "some text\" with quote" > test.txt
+    > cat test.txt
+
+* Append to a file:
+
+    > echo "first data" > test.txt
+    > echo "second" >> test.txt
+    > cat test.txt
+
+* Start an interactive python console and do something in it:
+
+    > python
+    >>> print(1 + 2)
+    >>> 3
+
+Points:
+
+  - 15 points: all described above,
+  - 20 points: support operators && and ||,
+  - 25 points: 20 + support &.
+
+Input: commands and their arguments, input/output redirection operators.
+
+Output: the same what a real terminal prints.
+
+Where to begin? The recommended implementation plan is below:
+
+- Implement command parser. This is an independent part of a solution, and at
+  the same time the simplest in terms of understanding what to do. It is worth
+  doing it in a separate source file, and test independently. Your parser
+  should turn a command like "command arg1 arg2 ... argN" into separate
+  "command" and an array of its arguments. For example, in a form of const char
+  **args, int arg_count. The parser should specially handle |, considering it a
+  command separator.
+  For example, let the parser to parse a command into
+
+      struct cmd {
+          const char *name;
+          const char **argv;
+          int argc;
+      }
+
+  The the parser should return an array of struct cmd. If there are no |, it
+  will contain 1 element;
+
+- Implement command execution without |, >, >>. Just one command;
+
+- Add support for |, >, >>.
+
+Architecture of the solution may be the following: there is a process-terminal,
+which reads user commands. On each command it does fork(). The new child
+executes the command using exec*() functions. The parent process waits for the
+child termination. For | the terminal opens a pipe, which is used to link
+input of one child and output of another. For > and >> the terminal opens a
+file, and using dup/dup2() changes standard output for a child.
