@@ -1,1 +1,144 @@
-To be done soon.
+------------------------------------------------------------------
+Game lobby chat.
+Language: C.
+Deadline: 2 weeks.
+------------------------------------------------------------------
+
+Need to implement a game lobby chat. It consists of a chat server
+and a client.
+
+The clients connect to the server and each message is broadcasted
+to all the clients via this server. So the server is like a game
+lobby. Everyone reads all messages from all the others and the
+messages are not persisted anyhow.
+
+In the attached .h and .c files you can find templates of
+functions and structures which need to be implemented.
+
+A usage example of the exe files is that you start a server,
+start one or more clients, and everything sent by anybody is
+displayed in all clients. Like so:
+
+$> ./server             $> ./client             $> ./client
+I am client-1!          I am client-1!          I am client-1!
+I am client-2!          I am client-2!          I am client-2!
+
+
+Rules:
+
+- Message end is `\n` (line wrap).
+
+- Own messages are not sent back to the client.
+
+- Empty messages (consisting of just spaces - see isspace()
+  function) are not sent at all.
+
+- Each message is trimmed from any spaces at both left and right
+  sides. For example, if I type "  m s   g   " in a terminal and
+  press enter, the message to be sent should be "m s   g".
+
+
+Restrictions:
+
+- You should not use sleep()/usleep() or any similar function
+  anywhere. All waiting for anything has to be done using epoll or
+  poll or kqueue.
+
+- Function select() is forbidden (it is outdated, broken by design
+  and is just bad practice - never use it).
+
+- All sockets should be created in non-blocking mode (O_NONBLOCK).
+
+- No busy-loops of any sort anywhere.
+
+- Be ready that send/write and other output functions can send
+  just a part of data. For example, send(100) can return 60.
+
+- The API in the headers can not be changed (unless you spot a
+  mistake there - then tell me).
+
+- You can use libev if you feel it will be easier than direct
+  usage of epoll/kqueue (but honestly it is unlikely).
+
+- In epoll you have to use epoll_event.data and in kqueue -
+  kevent.udata. For matching events to their sockets after return
+  from epoll_wait() and kevent().
+
+- The attached makefile should keep working and compilation should
+  have zero warnings/errors. Alternatively you can try to use
+  cmake, but then need to keep all the same compiler options.
+
+
+Relaxations:
+
+- Can assume message queues are always small enough to fit into
+  the memory.
+
+- Can assume all input and output buffers always fit into the
+  memory.
+
+- Can use abort() for critical errors like when an epoll or socket
+  descriptor couldn't be created, or malloc() fails.
+
+- You can store output buffer in any format. For example, copy
+  each message passed to feed() and store those in a list. Or copy
+  every message into a single big buffer to the end.
+
+- Client count is never too big. Peer-sockets and memory for their
+  resources are always enough on the server.
+
+- You can assume the client and server operate only on IPv4
+  addresses.
+
+
+Advices:
+
+- Start with a design of what you want to do. For example, you
+  need to think how to push data into the sockets - write()/send()
+  can send not all given data at once. Like write(100) can easily
+  write just 60 bytes. It means data for sending must be saved
+  into some buffer from which it will be sent in portions when the
+  socket is writable. You have to copy data for sending, and track
+  how much of it was sent.
+
+- Choose what you will use in the server - epoll, poll, or kqueue.
+  I highly recommend epoll/kqueue but you can use any of these 3
+  methods (note, kqueue is only available on Mac/FreeBSD and epoll
+  is only available on Linux).
+
+- You might want to start with the client. It is easier than the
+  server.
+
+- If you feel confident with the basics, you might want to right
+  away try to support client names (see a bonus point below).
+
+
+Possible solutions:
+
+- 15 points: implement all functions from all .h and .c files,
+  like described above and in the files (except optional ones,
+  from the bonus sections below).
+
+- +5 points: support client names. In chat_client_new() there is a
+  parameter 'name'. It has to be sent to server and be displayed
+  before each message of that client in all the other clients. If
+  doing this, you need to define the macro NEED_AUTHOR.
+
+  For this bonus you have to implement some kind of protocol in
+  your chat. Not just send texts, but structured data. Like JSON
+  or some binary format. Names should be separated from messages.
+
+- +5 points: implement server's messages - the function
+  chat_server_feed(). It is already defined in chat_server.h and
+  .c files. If doing this, you need to define the macro
+  NEED_SERVER_FEED.
+
+  Server messages are broadcast to all clients. If you did the
+  client names bonus, then server name should be 'server'.
+
+- -5 points: (yes, minus, not plus) - you can use C++ and STL
+  containers.
+
+The additional options for +5 points do not include each other.
+That is, you can do none, or do only one, or do only another, or
+both for +10. Or use C++ and get -5 to your sum.
