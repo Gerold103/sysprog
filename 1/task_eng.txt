@@ -4,134 +4,119 @@ Language: С.
 Deadline: 2 weeks.
 ------------------------------------------------------------------
 
-Files are stored on a disk. They have numbers in ASCII in
-arbitrary order separated by whitespaces. Each file should be
-sorted, and then results should be merged into a new file. That
-is, merge sort should be implemented.
+Files are stored on the disk. They store integers in arbitrary
+order separated by whitespaces. Each file should be sorted, and
+then results should be merged into a new file. That is, merge sort
+should be implemented.
 
-Sort of each file should be done in its dedicated coroutine, in
-its own context. Algorithm of how to sort a file can be chosen
-any.
 
-You can assume, that all files fit into the main memory, even
-together.
+Rules:
 
-Coroutines should be implemented using swapcontext() or
-setjump()/longjump(). Sort should be implemented by yourself
-without usage of built-in sorting functions like qsort(),
-system("sort ...") etc. It is not allowed to implement sort slower
-or equal to quadratical complexity, like bubble sort. Work with
-files should be done via a numeric file descriptor using
-open()/read()/write()/close() functions, or via FILE* descriptor
-and functions fopen()/fscanf()/fprintf()/fclose(). It is not
-allowed to use iostream, ostream, istream and other STL helpers.
+- Each file should be sorted in its own coroutine. This rule
+  targets your understanding of what cooperative multitasking is.
 
-Now some information about each implementation way, one of which
-should be chosen. Don't be afraid of functions like mmap(),
-setjump()/longjump(), mprotect(), sigaltstack(), which are used
-below and in examples example_jmp.c, example_swap.c. Understanding
-of them will come gradually during the course. Now just use them.
+- Files have ASCII encoding. I.e. they are plain text. Not unicode
+  or anything.
 
-* setjump()/longjump() - a 'long', runtime-defined goto, which
-allows to jump into an arbitrary place in stack. Each process has
-a memory segment called stack. When any function is called, the
-stack is increased, arguments and local variables are saved on it.
-When the function is finished, the stack is decreased back. With
-usage of longjump() you need to remember, that all coroutines are
-going to have one shared stack, and they will see local variables
-of each other. So you need to save all needed variables in some
-kind of a context, not related to the stack. For example, into a
-C struct, allocated on the heap. In example_jmp.c you can see,
-that function my_coroutine() does not have local variables - all
-is stored in struct task. Besides, result of setjump() becomes
-invalid right after return from the function called setjump(),
-because the stack is decreased and the label, created in
-setjump() is freed. So all the coroutine code shouldn't do return.
-Either the whole coroutine code should be a one big function, or
-a special macros should be used - coro_return(), like in
-example_jmp.c. The 'goto' semantic is easy to understand, and
-there is nothing bad in choosing setjump() implementation. Even
-though it may look a bit crutchy.
 
-* swapcontext() - function to switch between different execution
-contexts. Instead of one stack shared between coroutines there is
-a dedicated stack for each coroutine. Also function swapcontext()
-takes responsibility of doing the same as setjump()/longjump(), so
-no need to worry about inability to store local variables on the
-stack. Each coroutine is described by struct ucontext_t, where you
-should put function pointer to execute on a new stack, and stack
-memory. To allocate stack memory there are multiple ways. Each can
-be found in example_swap.c and below:
+Restrictions:
 
-1. Malloc() + mprotect() with flags PROT_READ | PROT_WRITE |
-   PROT_EXEC. Just malloc() is not enough, because that memory
-   does not have all permissions needed for being a stack. The
-   problem is that stack memory should be executable, so has the
-   flag PROT_EXEC. But the heap, from where malloc() takes memory,
-   is not executable by default.
-   Example:
+- Sorting should be implemented by you without built-in functions
+  like qsort(), system("sort ...") etc.
 
-   void *stack = malloc(stack_size);
-   mprotect(stack, stack_size, PROT_READ | PROT_WRITE |
-                               PROT_EXEC);
-   ucontext_t context;
-   context.uc_stack.ss_sp = stack;
-   context.uc_stack.ss_size = stack_size;
+- Sorting complexity of the individual files should be < O(N^2)
+  (for example, you can't use bubble sort). Given that
+  restriction, you can choose any sorting algorithm such as
+  "quick sort".
 
-2. Malloc() + sigaltstack(). This is the most canonical way, which
-   is used in coroutine libraries even when context switch has
-   nothing to do with swapcontext(), in assembly.
+- Work with files should be done
 
-   void *stack = malloc(stack_size);
-   stack_t ss;
-   ss.ss_sp = stack;
-   ss.ss_size = stack_size;
-   ss.ss_flags = 0;
-   sigaltstack(&ss, NULL);
-   ucontext_t context;
-   context.uc_stack.ss_sp = stack;
-   context.uc_stack.ss_size = stack_size;
+  - either via a numeric file descriptor using open() / read() /
+    write() / close() functions,
 
-3. Mmap() with PROT_READ | PROT_WRITE | PROT_EXEC. This is almost
-   the same as the first way, but a little less efficient in a
-   common case.
+  - or via FILE* and functions fopen() / fscanf() / fprintf() /
+    fclose(). It is not allowed to use std::iostream,
+    std::ostream, std::istream and other STL helpers.
 
-   void *stack = mmap(NULL, stack_size, PROT_READ | PROT_WRITE |
-                      PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0);
-   ucontext_t context;
-   context.uc_stack.ss_sp = stack;
-   context.uc_stack.ss_size = stack_size;
 
-Take into account that stack size usually should be at least 32KB.
-On Mac it may need 64KB.
+Relaxations:
 
-The coroutines should have a scheduling policy regulating when to
-switch to a next coroutine. There are several options.
+- Numbers fit into 'int' type.
 
-  - Easy: 15 points. Switch after each line to a next coroutine
-    in a cycle until all are finished.
+- You can assume, that all the files fit into the main memory,
+  even together.
 
-  - Middle: 20 points. Each from N coroutines is given T / N
-    milliseconds, where T - target latency, given as a command
-    line parameter. After each line check whether the time quantum
-    is finished, and switch if yes.
+- The final step - merging of the sorted files - can be done right
+  in main() without any coroutines.
 
-  - Hard: 25 points. The same as middle, but disk read should be
-    asynchronous. See aio_read() in 'man'.
 
-Input: names of files to sort, via command line arguments. For the
-middle complexity option there is also a target latency in the
-first argument. All time is given in microseconds.
+Advices:
 
-Output: total work time, and work time for each coroutine. Time
-should be printed in microseconds. For the middle complexity it is
-necessary also to print how many context switches was done for
-each coroutine so as to ensure, that target latency really affects
-things.
+- You can find more info about various unknown functions using
+  'man' command line utility. For example, 'man read' (or
+  'man 2 read') prints manual for 'read()' function. 'man strdup'
+  can tell more about 'strdup()' function. Similar for other
+  built-in functions.
+
+- Steps which you can follow if don't know where to start:
+
+  - Implement normal sorting of one file. No coroutines or
+    multiple files. Just read and sort a single file. Test this
+    code.
+
+  - Extend your code to sort multiple files and do the merge
+    sort, also without coroutines. Check it on the real tests.
+    This will allow to concentrate on adding coroutines, and not
+    to waste time on debugging both coroutines and sorting at the
+    same time.
+
+  - Start using coroutines.
+
+
+Possible solutions:
+
+The coroutines should switch between each other. Do the so called
+'yield's. These are coro_yield() in the solution.c file. There are
+several options how you use them:
+
+- 15 points: yield after each iteration in your individual files
+  sorting loops.
+
+- +5 points: each of N coroutines is given T / N microseconds,
+  where T - target latency given as a command line parameter.
+  After each sorting loop iteration you yield only if the current
+  coroutine's time quantum is over.
+
+- +5 points: allow to specify the number of coroutines. Each
+  coroutine should work as follows: if there are unsorted files,
+  then pick one and sort it, then repeat. If there are no unsorted
+  files, then the coroutine exits. For example, assume there are
+  10 files given and 3 coroutines. They pick 1 file each, 7 files
+  are waiting. One coroutine finishes the sorting, picks up a next
+  file (6 are waiting). Another coroutine finishes some other
+  and picks up the next one (5 files remaining). And so on until
+  all files are sorted. Then you do the normal merge sort. This
+  bonus task basically offers you do implement a coroutine pool.
+
+- -5 points: (yes, minus, not plus) - you can use C++ and STL
+  containers. Including std::iostream/ostream/etc. But you still
+  can't use std::sort().
+
+The additional options for +5 points do not include each other.
+That is, you can do none, or do only one, or do only another, or
+both for +10. Or use C++ and get -5 to your sum.
+
+Input: names of files to sort via the command line arguments. If
+you do the bonus tasks, then you also get the target latency in
+microseconds (if you do that bonus) and the coroutine count (if
+you do that bonus) before the file names.
+
+Output: total work time, work time and number of context switches
+for each individual coroutine.
 
 For testing you can create your files or generate them using
-generator.py script. A example, which should work for the easy
-complexity:
+generator.py script. An example, which should work for 15 points
+solution:
 
 $> python3 generator.py -f test1.txt -c 10000 -m 10000
 $> python3 generator.py -f test2.txt -c 10000 -m 10000
@@ -142,16 +127,5 @@ $> python3 generator.py -f test6.txt -c 100000 -m 10000
 
 $> ./main test1.txt test2.txt test3.txt test4.txt test5.txt test6.txt
 
-For checking the result you can use a script checker.py. All
+For checking the result you can use the script checker.py. All
 scripts assume working in python 3.
-
-Where to begin? Here is a recommended plan for doing the task:
-
-- Implement normal sort of one file. Test this code;
-
-- Extend the solution to implement merge sort, without coroutines.
-  Check it on the real tests. This will allow to concentrate on
-  adding coroutines, and not to waste time on debugging both
-  coroutines and sorting at the same time;
-
-- Add coroutines, using examples example_jmp.c and example_swap.c.
