@@ -29,6 +29,12 @@ Restrictions:
   restriction, you can choose any sorting algorithm such as
   "quick sort".
 
+- Total execution time is limited. But since the students have
+  different hardware, the limit is for my own PC. With 2.5GHz
+  CPU and an SSD sorting of 6 files each having 40k numbers
+  shouldn't take longer than a second. Normally it should even
+  take 100-200 ms, but 1 second will do as well.
+
 - Work with files should be done
 
   - either via a numeric file descriptor using open() / read() /
@@ -112,7 +118,10 @@ microseconds (if you do that bonus) and the coroutine count (if
 you do that bonus) before the file names.
 
 Output: total work time, work time and number of context switches
-for each individual coroutine.
+for each individual coroutine. Keep in mind that the coroutine
+work time doesn't include its wait time, i.e. while it was
+sleeping during the coro_yield(). So you should stop coroutine
+timer before each coro_yield() and start it again right after.
 
 For testing you can create your files or generate them using
 generator.py script. An example, which should work for 15 points
