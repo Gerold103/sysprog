@@ -40,6 +40,14 @@ $> cat "my file with whitespaces in name.txt"
 truncate
 test 'test'' \
 
+$> echo "4">file
+
+$> cat file
+4
+
+$> echo 100|grep 100
+100
+
 ----------------------------------------------------------------03
 
 $> # Comment

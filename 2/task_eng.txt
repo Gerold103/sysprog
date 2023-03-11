@@ -10,24 +10,60 @@ console. It should take lines like this:
     > command_name param1 param2 ...
 
 and execute them by calling 'command_name' with the given
-parameters. So be a terminal, basically. The program should
-correctly handle quoted strings even if there are whitespaces
-inside it. And you need to handle comments (by trimming them).
+parameters. So be a terminal, basically.
 
-Besides, the console should support pipes expressed as symbol '|',
-and output redirection using '>' and '>>'.
 
-Length of command line input is not limited, so you can't read it
-into a buffer of a fixed size.
+Rules:
 
-The program should print all the same what would be printed by a
-real terminal.
+- The program should correctly handle quoted strings even if there
+  are whitespaces inside it.
 
-It is forbidden to use functions like system(), popen() or use any
-other way to access existing terminal-like read-to-use functions.
+- You need to handle comments (by trimming them).
 
-You need to use functions pipe(), dup/dup2(), fork(), wait, open,
-close, at least one of execl/execle/execlp/execv/execvp/execvP.
+- The console should support pipes expressed as symbol '|' and
+  output redirection using '>' and '>>'.
+
+- The program should print all the same what would be printed by a
+  real terminal like /bin/bash.
+
+- You need to use functions pipe(), dup/dup2(), fork(), wait,
+  open, close, at least one of execl/execle/execlp/execv/execvp/
+  execvP.
+
+- The 'cd' command you need to implement yourself, not via 'exec'
+  functions. Because it changes the current working directory of
+  the terminal itself. Luckily, it is easy to do with the C
+  function 'chdir()'.
+
+- Your console should support tokens written without spaces when
+  /bin/bash is able to parse them too. Like this:
+  'echo "4">file' (works same as 'echo "4" > file'), or
+  'echo 100|grep 100' (works same as 'echo 100 | grep 100').
+
+- When something is unclear how it should work, you should test it
+  in the real console like /bin/bash and repeat the behaviour.
+
+
+Restrictions:
+
+- Length of command line input is not limited, so you can't read
+  it into a buffer of a fixed size. But each line obviously fits
+  into the main memory.
+
+- It is forbidden to use functions like system(), popen() or use
+  any other way to access existing terminal-like ready-to-use
+  functions.
+
+
+Relaxations:
+
+- You don't need to support redirect of specific output streams,
+  like stderr. These commands: 1>, 2>, $>, 1>>, and alike are not
+  needed. (Usual > and >> still are needed.)
+
+- No need to support multiple redirects like
+  'cmd > file1 > file2' or 'cmd > file1 file2'.
+
 
 Input examples:
 
@@ -61,6 +97,8 @@ Points:
   - 15 points: all described above,
   - 20 points: support operators && and ||,
   - 25 points: 20 + support &.
+  - -5 points: (yes, minus, not plus) - you can use C++ and STL
+  containers.
 
 Input: commands and their arguments, input/output redirection operators.
 

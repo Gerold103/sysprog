@@ -35,7 +35,10 @@ tests = [
 "echo 'truncate' > \"my file with whitespaces in name.txt\"",
 "cat \"my file with whitespaces in name.txt\"",
 "echo \"test 'test'' \\\\\" >> \"my file with whitespaces in name.txt\"",
-"cat \"my file with whitespaces in name.txt\""
+"cat \"my file with whitespaces in name.txt\"",
+"echo \"4\">file",
+"cat file",
+"echo 100|grep 100",
 ],
 [
 "# Comment",
