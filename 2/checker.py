@@ -55,6 +55,7 @@ tests = [
 "echo 'test' | exit 123 | grep 'test2'",
 "echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g' > result.txt",
 "cat result.txt",
+"yes bigdata | head -n 100000 | wc -l",
 ],
 [
 "false && echo 123",
