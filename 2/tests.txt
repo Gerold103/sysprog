@@ -93,8 +93,8 @@ $> echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g' 
 $> cat result.txt
 destination value
 
-$> yes bigdata | head -n 100000 | wc -l
-  100000
+$> yes bigdata | head -n 100000 | wc -l | tr -d [:blank:]
+100000
 
 ----------------------------------------------------------------05
 
