@@ -13,10 +13,6 @@ parser.add_argument('--max', type=int, choices=[15, 20, 25], default=15,
 		    help='max points number')
 args = parser.parse_args()
 
-p = subprocess.Popen([args.e], shell=False, stdin=subprocess.PIPE,
-		     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-		     bufsize=0)
-
 tests = [
 [
 "mkdir testdir",
@@ -56,6 +52,8 @@ tests = [
 "echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g' > result.txt",
 "cat result.txt",
 "yes bigdata | head -n 100000 | wc -l | tr -d [:blank:]",
+"exit 123 | echo 100",
+"echo 100 | exit 123",
 ],
 [
 "false && echo 123",
@@ -75,6 +73,11 @@ def finish(code):
 	os.system('rm -rf testdir')
 	sys.exit(code)
 
+def open_new_shell():
+	return subprocess.Popen([args.e], shell=False, stdin=subprocess.PIPE,
+				stdout=subprocess.PIPE,
+				stderr=subprocess.STDOUT, bufsize=0)
+
 prefix = '--------------------------------'
 command = ''
 for section_i, section in enumerate(tests, 1):
@@ -87,6 +90,7 @@ for section_i, section in enumerate(tests, 1):
 		command += 'echo "$> Test {}"\n'.format(test_i)
 		command += '{}\n'.format(test)
 
+p = open_new_shell()
 try:
 	output = p.communicate(command.encode(), 3)[0].decode()
 except subprocess.TimeoutExpired:
@@ -119,6 +123,31 @@ if not is_error and etalon_len != output_len:
 	      'expected {}'.format(output_len, etalon_len))
 	is_error = True
 p.terminate()
+
+# Explicitly test the 'exit' command. It is expected to terminate the shell,
+# hence tested separately.
+tests = [
+("exit", 0),
+("  exit ", 0),
+("  exit   10  ", 10),
+]
+for test in tests:
+	if is_error:
+		break
+	p = open_new_shell()
+	try:
+		p.stdin.write(test[0].encode() + b'\n')
+		p.wait(1)
+	except subprocess.TimeoutExpired:
+		print('Too long no output. Probably you forgot to '\
+		      'handle "exit" manually')
+		finish(-1)
+	p.terminate()
+	if p.returncode != test[1]:
+		print('Wrong exit code in test "{}"'.format(test[0]))
+		print('Expected {}, got {}'.format(test[1], p.returncode))
+		is_error = True
+
 if is_error:
 	print('{}\nThe tests did not pass'.format(prefix))
 	finish(-1)

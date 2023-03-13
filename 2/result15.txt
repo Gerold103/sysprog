@@ -54,3 +54,6 @@ $> Test 10
 destination value
 $> Test 11
 100000
+$> Test 12
+100
+$> Test 13

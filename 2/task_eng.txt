@@ -35,6 +35,13 @@ Rules:
   the terminal itself. Luckily, it is easy to do with the C
   function 'chdir()'.
 
+- The 'exit' command is also special, like 'cd'. Because it
+  concerns the terminal itself. It needs to be implemented
+  manually. But keep in mind that it should exit from the terminal
+  itself only if it is alone in the line. 'exit' - terminate the
+  shell. 'exit | echo 100' - do not terminate, execute it via
+  'exec' like any other command.
+
 - Your console should support tokens written without spaces when
   /bin/bash is able to parse them too. Like this:
   'echo "4">file' (works same as 'echo "4" > file'), or

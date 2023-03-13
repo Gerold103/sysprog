@@ -54,6 +54,9 @@ $> Test 10
 destination value
 $> Test 11
 100000
+$> Test 12
+100
+$> Test 13
 --------------------------------Section 5
 $> Test 1
 $> Test 2

@@ -96,6 +96,11 @@ destination value
 $> yes bigdata | head -n 100000 | wc -l | tr -d [:blank:]
 100000
 
+$> exit 123 | echo 100
+100
+
+$> echo 100 | exit 123
+
 ----------------------------------------------------------------05
 
 $> false && echo 123
