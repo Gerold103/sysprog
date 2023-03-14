@@ -69,6 +69,8 @@ tests = [
 ]
 ]
 
+prefix = '--------------------------------'
+
 def finish(code):
 	os.system('rm -rf testdir')
 	sys.exit(code)
@@ -78,7 +80,10 @@ def open_new_shell():
 				stdout=subprocess.PIPE,
 				stderr=subprocess.STDOUT, bufsize=0)
 
-prefix = '--------------------------------'
+def exit_failure():
+	print('{}\nThe tests did not pass'.format(prefix))
+	finish(-1)
+
 command = ''
 for section_i, section in enumerate(tests, 1):
 	if section_i == 5 and args.max == 15:
@@ -123,6 +128,8 @@ if not is_error and etalon_len != output_len:
 	      'expected {}'.format(output_len, etalon_len))
 	is_error = True
 p.terminate()
+if is_error:
+	exit_failure()
 
 # Explicitly test the 'exit' command. It is expected to terminate the shell,
 # hence tested separately.
@@ -132,8 +139,6 @@ tests = [
 ("  exit   10  ", 10),
 ]
 for test in tests:
-	if is_error:
-		break
 	p = open_new_shell()
 	try:
 		p.stdin.write(test[0].encode() + b'\n')
@@ -146,11 +151,55 @@ for test in tests:
 	if p.returncode != test[1]:
 		print('Wrong exit code in test "{}"'.format(test[0]))
 		print('Expected {}, got {}'.format(test[1], p.returncode))
-		is_error = True
+		exit_failure()
 
+# Test an extra long command. To ensure the shell doesn't have an internal
+# buffer size limit (well, it always can allocate like 1GB, but this has to be
+# caught at review).
+p = open_new_shell()
+count = 100 * 1024
+output_expected = 'a' * count + '\n'
+command = 'echo ' + output_expected
+try:
+	output = p.communicate(command.encode(), 5)[0].decode()
+except subprocess.TimeoutExpired:
+	print('Too long no output on an extra big command')
+	is_error = True
+p.terminate()
+if not is_error and output != output_expected:
+	print('Bad output for an extra big command')
+	is_error = True
+if not is_error and p.returncode != 0:
+	print('Bad return code for an extra big command - expected 0 (success)')
+	is_error = True
 if is_error:
-	print('{}\nThe tests did not pass'.format(prefix))
-	finish(-1)
-else:
-	print('{}\nThe tests passed'.format(prefix))
-	finish(0)
+	print('Failed an extra big command (`echo a....` with `a` '\
+	      'repeated {} times'.format(count))
+	exit_failure()
+
+# Test extra many args. To ensure the shell doesn't have an internal argument
+# count limit (insane limits like 1 million have to be caught at review).
+p = open_new_shell()
+count = 100 * 1000
+output_expected = 'a ' * (count - 1) + 'a\n'
+command = 'echo ' + output_expected
+try:
+	output = p.communicate(command.encode(), 5)[0].decode()
+except subprocess.TimeoutExpired:
+	print('Too long no output on a command with extra many args')
+	is_error = True
+p.terminate()
+if not is_error and output != output_expected:
+	print('Bad output for a command with extra many args')
+	is_error = True
+if not is_error and p.returncode != 0:
+	print('Bad return code for a command with extra many args - '\
+	      'expected 0 (success)')
+	is_error = True
+if is_error:
+	print('Failed a command with extra many args (`echo a a a ...` with '\
+	      '`a` repeated {} times'.format(count))
+	exit_failure()
+
+print('{}\nThe tests passed'.format(prefix))
+finish(0)
