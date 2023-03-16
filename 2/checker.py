@@ -54,6 +54,13 @@ tests = [
 "yes bigdata | head -n 100000 | wc -l | tr -d [:blank:]",
 "exit 123 | echo 100",
 "echo 100 | exit 123",
+"printf \"import time\\n\\\n"\
+	"time.sleep(0.1)\\n\\\n"\
+	"f = open('test.txt', 'w')\\n\\\n"\
+	"f.write('Text\\\\\\n')\\n\\\n"\
+	"f.close()\\n\" > test.py",
+"python test.py | exit 0",
+"cat test.txt",
 ],
 [
 "false && echo 123",

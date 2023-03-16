@@ -101,6 +101,17 @@ $> exit 123 | echo 100
 
 $> echo 100 | exit 123
 
+$> printf "import time\n\
+time.sleep(0.1)\n\
+f = open('test.txt', 'a')\n\
+f.write('Text\\\\n')\n\
+f.close()\n" > test.py
+
+$> python script.py | exit 0
+
+$> cat test.txt
+Text
+
 ----------------------------------------------------------------05
 
 $> false && echo 123
