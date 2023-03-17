@@ -107,7 +107,7 @@ f = open('test.txt', 'a')\n\
 f.write('Text\\\\n')\n\
 f.close()\n" > test.py
 
-$> python script.py | exit 0
+$> python test.py | exit 0
 
 $> cat test.txt
 Text
