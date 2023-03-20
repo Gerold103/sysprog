@@ -278,6 +278,19 @@ test_rights(void)
 	unit_check(ufs_write(fd, buf1, buf1_size) == buf1_size, "can write");
 	unit_fail_if(ufs_close(fd));
 
+	/* Write-only shouldn't truncate the file. */
+	fd = ufs_open("file", UFS_WRITE_ONLY);
+	unit_fail_if(fd == -1);
+	unit_check(ufs_write(fd, "123456", 6) == 6, "write something");
+	unit_fail_if(ufs_close(fd));
+	fd = ufs_open("file", UFS_WRITE_ONLY);
+	unit_check(ufs_write(fd, "abc", 3) == 3, "write again but less");
+	unit_fail_if(ufs_close(fd));
+	fd = ufs_open("file", UFS_READ_ONLY);
+	unit_check(ufs_read(fd, buf2, sizeof(buf2)) == 6, "data still here");
+	unit_check(memcmp(buf2, "abc456", 6) == 0, "data is ok");
+	unit_fail_if(ufs_close(fd));
+
 	unit_fail_if(ufs_delete("file") != 0);
 	unit_test_finish();
 #endif
