@@ -1,5 +1,6 @@
 #include "userfs.h"
 #include "unit.h"
+#include <assert.h>
 #include <limits.h>
 #include <string.h>
 
@@ -117,17 +118,80 @@ test_io(void)
 	int fd2 = ufs_open("file", 0);
 	unit_fail_if(fd1 == -1 || fd2 == -1);
 
-	const char *data = "123";
-	int size = strlen(data) + 1;
-	unit_check(ufs_write(fd1, data, size) == size, "data is written");
-
 	char buffer[2048];
-	unit_check(ufs_read(fd2, buffer, sizeof(buffer)) == size,
-		   "data is read");
-	unit_check(memcmp(data, buffer, size) == 0, "the same data");
+	unit_check(ufs_write(fd1, "123", 3) == 3, "data is written");
+	unit_check(ufs_read(fd2, buffer, sizeof(buffer)) == 3, "data is read");
+	unit_check(memcmp(buffer, "123", 3) == 0, "the same data");
 
 	ufs_close(fd1);
 	ufs_close(fd2);
+	/*
+	 * On re-open the file descriptor position is again zero.
+	 */
+	fd1 = ufs_open("file", 0);
+	unit_fail_if(fd1 == -1);
+	unit_check(ufs_read(fd1, buffer, sizeof(buffer)) == 3, "read");
+	unit_check(memcmp(buffer, "123", 3) == 0, "got data from start");
+	unit_check(ufs_write(fd1, "45678", 5) == 5, "write more");
+	ufs_close(fd1);
+
+	fd1 = ufs_open("file", 0);
+	unit_fail_if(fd1 == -1);
+	unit_check(ufs_write(fd1, "abcd", 4) == 4, "overwrite");
+	unit_check(ufs_read(fd1, buffer, sizeof(buffer)) == 4, "read rest");
+	unit_check(memcmp(buffer, "5678", 4) == 0, "got the tail");
+	ufs_close(fd1);
+
+	fd1 = ufs_open("file", 0);
+	unit_fail_if(fd1 == -1);
+	unit_check(ufs_read(fd1, buffer, sizeof(buffer)) == 8, "read all");
+	unit_check(memcmp(buffer, "abcd5678", 4) == 0, "check all");
+	ufs_close(fd1);
+	/*
+	 * Write multiple blocks.
+	 */
+	size_t some_size = 1234;
+	assert(sizeof(buffer) > some_size);
+	for (int i = 0; i < some_size; ++i)
+		buffer[i] = 'a' + i % ('z' - 'a' + 1);
+	fd1 = ufs_open("file", 0);
+	unit_fail_if(fd1 == -1);
+	size_t progress = 0;
+	while (progress < some_size) {
+		size_t to_write = progress % 123 + 1;
+		if (to_write + progress > some_size)
+			to_write = some_size - progress;
+		ssize_t rc = ufs_write(fd1, buffer + progress, to_write);
+		if (rc != to_write)
+			break;
+		progress += rc;
+	}
+	unit_check(progress == some_size, "write big data in parts");
+	/*
+	 * Read them back.
+	 */
+	ufs_close(fd1);
+	fd1 = ufs_open("file", 0);
+	unit_fail_if(fd1 == -1);
+	progress = 0;
+	while (progress < some_size) {
+		size_t to_read = progress % 123 + 1;
+		/*
+		 * If to read + progress > size, it should be fine. Reading will
+		 * be partial then.
+		 */
+		ssize_t rc = ufs_read(fd1, buffer + progress, to_read);
+		if (rc <= 0)
+			break;
+		progress += rc;
+	}
+	unit_check(progress == some_size, "read big data in parts");
+	ufs_close(fd1);
+	bool ok = true;
+	for (int i = 0; i < some_size && ok; ++i)
+		ok = ok && buffer[i] == 'a' + i % ('z' - 'a' + 1);
+	unit_check(ok, "data is correct");
+
 	ufs_delete("file");
 
 	unit_test_finish();
@@ -277,8 +341,13 @@ test_rights(void)
 	unit_check(memcmp(buf2, buf3, buf3_size) == 0, "data is correct");
 	unit_check(ufs_write(fd, buf1, buf1_size) == buf1_size, "can write");
 	unit_fail_if(ufs_close(fd));
-
-	/* Write-only shouldn't truncate the file. */
+	/*
+	 * Write-only shouldn't truncate the file.
+	 */
+	unit_fail_if(ufs_delete("file") != 0);
+	fd = ufs_open("file", UFS_CREATE);
+	unit_fail_if(fd == -1);
+	ufs_close(fd);
 	fd = ufs_open("file", UFS_WRITE_ONLY);
 	unit_fail_if(fd == -1);
 	unit_check(ufs_write(fd, "123456", 6) == 6, "write something");
