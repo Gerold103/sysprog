@@ -234,7 +234,7 @@ test_rights(void)
 
 	int fd = ufs_open("file", UFS_CREATE);
 	unit_check(fd != -1, "file is opened with 'create' flag only");
-	char *buf1 = "hello";
+	char buf1[] = "hello";
 	int buf1_size = strlen(buf1) + 1;
 	ssize_t rc = ufs_read(fd, buf1, buf1_size);
 	unit_check(rc == 0, "it is allowed to read from it");
@@ -266,7 +266,7 @@ test_rights(void)
 	unit_check(fd != -1, "opened with 'write only");
 	unit_check(ufs_read(fd, buf2, sizeof(buf2)) == -1, "can not read");
 	unit_check(ufs_errno() == UFS_ERR_NO_PERMISSION, "errno is set");
-	char *buf3 = "new data which rewrites previous";
+	const char *buf3 = "new data which rewrites previous";
 	int buf3_size = strlen(buf3) + 1;
 	unit_check(ufs_write(fd, buf3, buf3_size) == buf3_size, "can write");
 	unit_fail_if(ufs_close(fd));
