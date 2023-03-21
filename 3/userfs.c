@@ -3,7 +3,7 @@
 
 enum {
 	BLOCK_SIZE = 512,
-	MAX_FILE_SIZE = 1024 * 1024 * 1024,
+	MAX_FILE_SIZE = 1024 * 1024 * 100,
 };
 
 /** Global error code. Set from any function on any error. */

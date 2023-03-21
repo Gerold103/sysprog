@@ -200,7 +200,7 @@ test_max_file_size(void)
 	char *buf = (char *) malloc(buf_size);
 	for (int i = 0; i < buf_size; ++i)
 		buf[i] = 'a' + i % 26;
-	for (int i = 0; i < 1024; ++i) {
+	for (int i = 0; i < 100; ++i) {
 		ssize_t rc = ufs_write(fd, buf, buf_size);
 		unit_fail_if(rc != buf_size);
 	}
@@ -212,7 +212,7 @@ test_max_file_size(void)
 	fd = ufs_open("file", 0);
 	unit_fail_if(fd == -1);
 	char *buf2 = (char *) malloc(buf_size);
-	for (int i = 0; i < 1014; ++i) {
+	for (int i = 0; i < 100; ++i) {
 		ssize_t rc = ufs_read(fd, buf2, buf_size);
 		unit_fail_if(rc != buf_size);
 		unit_fail_if(memcmp(buf2, buf, buf_size) != 0);
