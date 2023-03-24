@@ -26,13 +26,13 @@ main()
 	}
 	int number;
 	while (scanf("%d", &number) > 0) {
-		if (write(sock, &number, sizeof(number)) == -1) {
+		if (send(sock, &number, sizeof(number), 0) == -1) {
 			printf("error = %s\n", strerror(errno));
 			continue;
 		}
 		printf("Sent %d\n", number);
 		number = 0;
-		int rc = read(sock, &number, sizeof(number));
+		int rc = recv(sock, &number, sizeof(number), 0);
 		if (rc == 0) {
 			printf("Closed connection\n");
 			break;

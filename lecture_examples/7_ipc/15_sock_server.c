@@ -16,7 +16,7 @@ worker_f(void *arg)
 	int client_sock = (int) arg;
 	while(1) {
 		int buffer = 0;
-		ssize_t size = read(client_sock, &buffer, sizeof(buffer));
+		ssize_t size = recv(client_sock, &buffer, sizeof(buffer), 0);
 		if (size == -1) {
 			printf("error = %s\n", strerror(errno));
 			continue;
@@ -27,7 +27,7 @@ worker_f(void *arg)
 		}
 		printf("Received %d\n", buffer);
 		buffer++;
-		if (write(client_sock, &buffer, sizeof(buffer)) == -1)
+		if (send(client_sock, &buffer, sizeof(buffer), 0) == -1)
 			printf("error = %s\n", strerror(errno));
 		else
 			printf("Sent %d\n", buffer);

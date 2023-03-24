@@ -40,8 +40,9 @@ sorter(struct worker *worker, const char *filename)
 int
 main(int argc, const char **argv)
 {
-	struct timeval start;
-	gettimeofday(&start, NULL);
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	uint64_t start_ns = ts.tv_sec * 1000000000 + ts.tv_nsec;
 	int nfiles = argc - 1;
 	struct worker *workers = malloc(sizeof(struct worker) * nfiles);
 	struct worker *w = workers;
@@ -57,10 +58,9 @@ main(int argc, const char **argv)
 		memcpy(pos, w->array, w->size * sizeof(int));
 		pos += w->size;
 	}
-	struct timeval tmp;
-	gettimeofday(&tmp, NULL);
-	uint64_t microsecs = tmp.tv_sec * 1000000 + tmp.tv_usec -
-			     start.tv_sec * 1000000 + start.tv_usec;
-	printf("presort time = %lf\n", (microsecs + 0.0) / 1000000);
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	uint64_t end_ns = ts.tv_sec * 1000000000 + ts.tv_nsec;
+	double sec = (end_ns - start_ns) / 1000000000.0;
+	printf("presort time = %lfs\n", sec);
 	return 0;
 }

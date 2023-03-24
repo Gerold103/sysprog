@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <stdint.h>
+#include <sys/wait.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/ipc.h>
@@ -13,11 +16,11 @@ main()
 {
 	key_t key = ftok("./a.out", 0);
 	int id = shmget(key, 1024, IPC_CREAT | S_IRWXU | S_IRWXO);
-	printf("created mem with id %d\n", id);
+	printf("Created mem with id %d\n", id);
 	char *mem = shmat(id, NULL, 0);
 	int align = __alignof__(pthread_mutex_t);
 	pthread_mutex_t *mutex = (pthread_mutex_t *)
-		(mem + align - mem % align);
+		(mem + align - (uint64_t)mem % align);
 	volatile char *data = (char *) mutex + sizeof(*mutex);
 	*data = 0;
 	pthread_mutexattr_t attr;
@@ -25,7 +28,7 @@ main()
 	pthread_mutexattr_setrobust(&attr, PTHREAD_MUTEX_ROBUST);
 	pthread_mutex_init(mutex, &attr);
 	pthread_mutexattr_destroy(&attr);
-	printf("Created mutex between processed\n");
+	printf("Created mutex between processes\n");
 
 	if (fork() == 0) {
 		printf("Child holds a lock\n");
@@ -35,7 +38,8 @@ main()
 		exit(1);
 	}
 	printf("Parent waits for 1 in shmem\n");
-	while (*data != 1) {}
+	wait(NULL);
+	assert(*data == 1);
 	printf("Parent tries to lock\n");
 	if (pthread_mutex_lock(mutex) == EOWNERDEAD) {
 		printf("Owner is dead, restore\n");

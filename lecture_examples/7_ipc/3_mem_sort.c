@@ -38,7 +38,7 @@ write_to_shared_mem(char *mem, const char *src, int size)
 	int saved_size = mem_size;
 	char *saved_mem = mem;
 	while (1) {
-		while (! *is_writable)
+		while (! __atomic_load_n(is_writable, __ATOMIC_ACQUIRE))
 			sched_yield();
 		int to_copy = mem_size > size ? size : mem_size;
 		memcpy(mem, src, to_copy);
@@ -47,8 +47,8 @@ write_to_shared_mem(char *mem, const char *src, int size)
 		mem += to_copy;
 		src += to_copy;
 
-		*is_writable = 0;
-		*is_readable = 1;
+		__atomic_store_n(is_writable, 0, __ATOMIC_RELEASE);
+		__atomic_store_n(is_readable, 1, __ATOMIC_RELEASE);
 		if (size == 0)
 			break;
 		mem = saved_mem;
@@ -66,7 +66,7 @@ read_from_shared_mem(char *mem, char *dst, int size)
 	int saved_size = mem_size;
 	char *saved_mem = mem;
 	while (1) {
-		while (! *is_readable)
+		while (! __atomic_load_n(is_readable, __ATOMIC_ACQUIRE))
 			sched_yield();
 		int to_copy = mem_size > size ? size : mem_size;
 		memcpy(dst, mem, to_copy);
@@ -75,8 +75,8 @@ read_from_shared_mem(char *mem, char *dst, int size)
 		mem += to_copy;
 		dst += to_copy;
 
-		*is_readable = 0;
-		*is_writable = 1;
+		__atomic_store_n(is_readable, 0, __ATOMIC_RELEASE);
+		__atomic_store_n(is_writable, 1, __ATOMIC_RELEASE);
 		if (size == 0)
 			break;
 		mem = saved_mem;
@@ -109,8 +109,9 @@ sorter(struct worker *worker, const char *filename)
 int
 main(int argc, const char **argv)
 {
-	struct timeval start;
-	gettimeofday(&start, NULL);
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	uint64_t start_ns = ts.tv_sec * 1000000000 + ts.tv_nsec;
 	int nfiles = argc - 1;
 	struct worker *workers = malloc(sizeof(struct worker) * nfiles);
 	struct worker *w = workers;
@@ -145,10 +146,9 @@ main(int argc, const char **argv)
 		memcpy(pos, w->array, w->size * sizeof(int));
 		pos += w->size;
 	}
-	struct timeval tmp;
-	gettimeofday(&tmp, NULL);
-	uint64_t microsecs = tmp.tv_sec * 1000000 + tmp.tv_usec -
-			     start.tv_sec * 1000000 + start.tv_usec;
-	printf("presort time = %lf\n", (microsecs + 0.0) / 1000000);
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	uint64_t end_ns = ts.tv_sec * 1000000000 + ts.tv_nsec;
+	double sec = (end_ns - start_ns) / 1000000000.0;
+	printf("presort time = %lfs\n", sec);
 	return 0;
 }
