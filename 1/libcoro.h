@@ -1,5 +1,4 @@
-#ifndef LIBCORO_INCLUDED
-#define LIBCORO_INCLUDED
+#pragma once
 
 #include <stdbool.h>
 
@@ -46,5 +45,3 @@ coro_delete(struct coro *c);
 /** Switch to another not finished coroutine. */
 void
 coro_yield(void);
-
-#endif /* LIBCORO_INCLUDED */

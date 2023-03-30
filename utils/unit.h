@@ -1,5 +1,4 @@
-#ifndef UNIT_TEST_H
-#define UNIT_TEST_H
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,5 +31,3 @@
 		printf("ok - %s\n", (msg));				\
 	}								\
 })
-
-#endif
