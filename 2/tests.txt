@@ -128,6 +128,20 @@ $> true || false || true && echo 123
 $> false || echo 123
 123
 
+$> echo 100 || echo 200
+100
+
+$> echo 100 && echo 200
+100
+200
+
+$> echo 100 | grep 1 || echo 200 | grep 2
+100
+
+$> echo 100 | grep 1 && echo 200 | grep 2
+100
+200
+
 ----------------------------------------------------------------06
 
 $> sleep 0.5 && echo 'back sleep is done' &

@@ -67,7 +67,11 @@ tests = [
 "true && echo 123",
 "true || false && echo 123",
 "true || false || true && echo 123",
-"false || echo 123"
+"false || echo 123",
+"echo 100 || echo 200",
+"echo 100 && echo 200",
+"echo 100 | grep 1 || echo 200 | grep 2",
+"echo 100 | grep 1 && echo 200 | grep 2",
 ],
 [
 "sleep 0.5 && echo 'back sleep is done' &",
