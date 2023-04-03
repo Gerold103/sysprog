@@ -33,7 +33,7 @@ struct file {
 	/** How many file descriptors are opened on the file. */
 	int refs;
 	/** File name. */
-	const char *name;
+	char *name;
 	/** Files are stored in a double-linked list. */
 	struct file *next;
 	struct file *prev;
