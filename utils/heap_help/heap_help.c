@@ -18,16 +18,23 @@ static ssize_t (*default_getline)(char **, size_t *, FILE *) = NULL;
 
 static int64_t alloc_count = 0;
 static bool global_lock = false;
+static __thread int depth = 0;
 
 static inline void
 alloc_count_inc()
 {
+	if (depth > 1)
+		return;
+	assert(depth == 1);
 	__atomic_add_fetch(&alloc_count, 1, __ATOMIC_SEQ_CST);
 }
 
 static inline void
 alloc_count_sub()
 {
+	if (depth > 1)
+		return;
+	assert(depth == 1);
 	int64_t old = __atomic_sub_fetch(&alloc_count, 1, __ATOMIC_SEQ_CST);
 	if (old >= 0)
 		return;
@@ -103,10 +110,12 @@ ssize_t
 getline(char **linep, size_t *linecapp, FILE *stream)
 {
 	heaph_touch();
+	++depth;
 	char *line_old = *linep;
 	ssize_t res = default_getline(linep, linecapp, stream);
 	if (line_old == NULL && *linep != NULL)
 		alloc_count_inc();
+	--depth;
 	return res;
 }
 
@@ -114,9 +123,11 @@ char *
 strdup(const char *ptr)
 {
 	heaph_touch();
+	++depth;
 	char *res = default_strdup(ptr);
 	if (res != NULL)
 		alloc_count_inc();
+	--depth;
 	return res;
 }
 
@@ -124,9 +135,11 @@ void *
 malloc(size_t size)
 {
 	heaph_touch();
+	++depth;
 	void *res = default_malloc(size);
 	if (res != NULL)
 		alloc_count_inc();
+	--depth;
 	return res;
 }
 
@@ -134,9 +147,11 @@ void *
 calloc(size_t num, size_t size)
 {
 	heaph_touch();
+	++depth;
 	void *res = default_calloc(num, size);
 	if (res != NULL)
 		alloc_count_inc();
+	--depth;
 	return res;
 }
 
@@ -144,9 +159,11 @@ void *
 realloc(void *ptr, size_t size)
 {
 	heaph_touch();
+	++depth;
 	void *res = default_realloc(ptr, size);
 	if (ptr == NULL && res != NULL)
 		alloc_count_inc();
+	--depth;
 	return res;
 }
 
@@ -156,8 +173,10 @@ free(void *ptr)
 	if (ptr == NULL)
 		return;
 	heaph_touch();
+	++depth;
 	alloc_count_sub();
 	default_free(ptr);
+	--depth;
 }
 
 uint64_t
