@@ -97,9 +97,9 @@ main(int argc, const char **argv)
 			}
 			if (rc == 0) {
 				printf("Client disconnected\n");
-				close(new_ev.data.fd);
 				epoll_ctl(ep, EPOLL_CTL_DEL, new_ev.data.fd,
 					  NULL);
+				close(new_ev.data.fd);
 			}
 		}
 	}
