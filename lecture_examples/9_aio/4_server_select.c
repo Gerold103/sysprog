@@ -15,12 +15,12 @@ int
 interact(int client_sock)
 {
 	int buffer = 0;
-	ssize_t size = read(client_sock, &buffer, sizeof(buffer));
+	ssize_t size = recv(client_sock, &buffer, sizeof(buffer), 0);
 	if (size <= 0)
 		return (int) size;
 	printf("Received %d\n", buffer);
 	buffer++;
-	size = write(client_sock, &buffer, sizeof(buffer));
+	size = send(client_sock, &buffer, sizeof(buffer), 0);
 	if (size > 0)
 		printf("Sent %d\n", buffer);
 	return (int) size;
