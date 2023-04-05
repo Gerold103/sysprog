@@ -95,9 +95,9 @@ main(int argc, const char **argv)
 			int rc = interact(fds[i].fd);
 			if (rc == -1) {
 				printf("error = %s\n", strerror(errno));
-				break;
-			}
-			if (rc == 0) {
+				if (errno != EWOULDBLOCK && errno != EAGAIN)
+					break;
+			} else if (rc == 0) {
 				printf("Client disconnected\n");
 				remove_client(&fds, &fd_count, i);
 			}
