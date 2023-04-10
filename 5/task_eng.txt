@@ -124,9 +124,8 @@ Possible solutions:
   before each message of that client in all the other clients. If
   doing this, you need to define the macro NEED_AUTHOR.
 
-  For this bonus you have to implement some kind of protocol in
-  your chat. Not just send texts, but structured data. Like JSON
-  or some binary format. Names should be separated from messages.
+  For this bonus to be accepted the clients should send their name
+  to the server only once.
 
 - +5 points: implement server's messages - the function
   chat_server_feed(). It is already defined in chat_server.h and
