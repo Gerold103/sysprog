@@ -1,6 +1,7 @@
 #include "thread_pool.h"
 #include "unit.h"
 #include <pthread.h>
+#include <unistd.h>
 
 static void
 test_new(void)
@@ -33,7 +34,15 @@ test_new(void)
 static void *
 task_incr_f(void *arg)
 {
-	++*((int *) arg);
+	__atomic_add_fetch((int *)arg, 1, __ATOMIC_RELAXED);
+	return arg;
+}
+
+static void *
+task_wait_for_f(void *arg)
+{
+	while(__atomic_load_n((int *)arg, __ATOMIC_RELAXED) == 0)
+		usleep(100);
 	return arg;
 }
 
@@ -108,6 +117,87 @@ test_thread_pool_delete(void)
 	unit_test_finish();
 }
 
+static void
+map_reduce_inc(struct thread_pool *p, struct thread_task **tasks, int count,
+	       int *arg)
+{
+	void *result;
+	for (int i = 0; i < count; ++i) {
+		struct thread_task **t = &tasks[i];
+		unit_fail_if(thread_task_new(t, task_incr_f, arg) != 0);
+		unit_fail_if(thread_pool_push_task(p, *t) != 0);
+	}
+	for (int i = 0; i < count; ++i) {
+		struct thread_task *t = tasks[i];
+		unit_fail_if(thread_task_join(t, &result) != 0);
+		unit_fail_if(thread_task_delete(t) != 0);
+		unit_fail_if(result != arg);
+	}
+}
+
+static void
+test_thread_pool_max_tasks(void)
+{
+	unit_test_start();
+
+	struct thread_pool *p;
+	int more_count = 10;
+	int total_count = more_count + TPOOL_MAX_TASKS;
+	struct thread_task **tasks = malloc(sizeof(*tasks) * total_count);
+	unit_fail_if(thread_pool_new(5, &p) != 0);
+	/*
+	 * Push max tasks and join all.
+	 */
+	int arg = 0;
+	map_reduce_inc(p, tasks, TPOOL_MAX_TASKS, &arg);
+	unit_check(arg == TPOOL_MAX_TASKS, "max tasks are finished");
+	arg = 0;
+	/*
+	 * Push a few more to be sure the pool doesn't overflow any counters
+	 * after max.
+	 */
+	map_reduce_inc(p, tasks, more_count, &arg);
+	unit_check(arg == more_count, "a few more tasks are finished");
+	/*
+	 * Count > max gives an error.
+	 */
+	arg = 0;
+	for (int i = 0; i < TPOOL_MAX_TASKS; ++i) {
+		struct thread_task **t = &tasks[i];
+		unit_fail_if(thread_task_new(t, task_wait_for_f, &arg) != 0);
+		unit_fail_if(thread_pool_push_task(p, *t) != 0);
+	}
+	/*
+	 * Slight overuse is allowed when students do not count tasks being
+	 * in-progress. From certain point of view it might be fair.
+	 */
+	int overuse = 0;
+	for (int i = TPOOL_MAX_TASKS; i < total_count; ++i) {
+		struct thread_task **t = &tasks[i];
+		unit_fail_if(thread_task_new(t, task_wait_for_f, &arg) != 0);
+		int rc = thread_pool_push_task(p, *t);
+		if (rc == 0) {
+			++overuse;
+			continue;
+		}
+		unit_check(rc == TPOOL_ERR_TOO_MANY_TASKS, "too many tasks");
+		break;
+	}
+	unit_check(overuse < more_count, "reached max tasks");
+	__atomic_store_n(&arg, 1, __ATOMIC_RELAXED);
+	for (int i = 0; i < TPOOL_MAX_TASKS + overuse; ++i) {
+		void *result;
+		struct thread_task *t = tasks[i];
+		unit_fail_if(thread_task_join(t, &result) != 0);
+		unit_fail_if(thread_task_delete(t) != 0);
+		unit_fail_if(result != &arg);
+	}
+	free(tasks);
+	unit_fail_if(thread_pool_delete(p) != 0);
+
+	unit_test_finish();
+}
+
 int
 main(void)
 {
@@ -116,6 +206,7 @@ main(void)
 	test_new();
 	test_push();
 	test_thread_pool_delete();
+	test_thread_pool_max_tasks();
 
 	unit_test_finish();
 	return 0;
