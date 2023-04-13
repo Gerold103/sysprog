@@ -37,11 +37,6 @@ User can check task's status (waits for getting a worker; is
 already being executed), can wait for its end and get its result
 with thread_task_join, similar to how pthread_join works.
 
-In a solution you have to keep in mind that thread_pool at
-creation via thread_pool_new shouldn't start all max number of
-threads at once. The threads have to be started gradually when
-needed, until reach the limit specified in thread_pool_new.
-
 Since the task is to implement a library, there is no 'main'
 function and no input from anywhere. You can write tests in C in a
 separate file with 'main' and which will 'include' your solution.
@@ -51,17 +46,50 @@ this:
 
         gcc thread_pool.c main.c
 
+
+Rules:
+
+- thread_pool at creation via thread_pool_new() shouldn't start
+  all max number of threads at once. The threads have to be
+  started gradually when needed, until reach the limit specified
+  in thread_pool_new().
+
+- Joined but not yet deleted tasks can be re-pushed back into the
+  pool.
+
+- The other rules can be read in the documentation in
+  thread_pool.h and deducted from the tests.
+
+
+Restrictions:
+
+- The code should have zero busy loops or sleep loops. These are
+  only allowed in tests. I.e. in thread_task_join() you can't
+  just do 'while (!task->is_finished) {usleep(1)};'. For waiting
+  on anything you need to use pthread_cond_t.
+
+
+Relaxations:
+
+- There is no limit on the number of mutexes and condvars. You
+  can even store them in each task.
+
+
 Possible solutions:
 
-- 15 points: implement all functions from thread_pool.h, like
-  described above and in that file.
+- 15 points: implement all functions from thread_pool.h, which are
+  not hidden inside macros.
 
-- +5 points: implement function detach. In thread_pool.h there is
-  this function already defined under the macro NEED_DETACH.
+- +5 points: implement thread_task_detach(). The documentation is
+  in thread_pool.h. You need to define the macro NEED_DETACH then.
 
-- +5 points: implement a timeout for thread_task_join(). There is
-  a new function defined under the macro NEED_TIMED_JOIN.
+- +5 points: implement thread_task_timed_join(). The documentation
+  is in thread_pool.h. You need to define the macro
+  NEED_TIMED_JOIN then.
+
+- -5 points: (yes, minus, not plus) - you can use C++, STL
+  containers, std::thread, std::mutex, etc.
 
 The additional options for +5 points do not include each other.
 That is, you can do none, or do only one, or do only another, or
-both for +10.
+both for +10. Or use C++ and get -5 to your sum.
