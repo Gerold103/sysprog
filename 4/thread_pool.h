@@ -6,7 +6,7 @@
  * Here you should specify which features do you want to implement via macros:
  * NEED_DETACH and NEED_TIMED_JOIN. If you want to enable detach, do:
  *
- *     #define NEED_OPEN_FLAGS
+ *     #define NEED_DETACH
  *
  * To enable timed join do:
  *
