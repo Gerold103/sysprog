@@ -203,6 +203,52 @@ test_thread_pool_max_tasks(void)
 	unit_test_finish();
 }
 
+
+static void
+test_timed_join(void)
+{
+#ifdef NEED_TIMED_JOIN
+	unit_test_start();
+
+	struct thread_pool *p;
+	struct thread_task *task;
+	int arg = 0;
+	void *result;
+	unit_fail_if(thread_pool_new(5, &p) != 0);
+	unit_fail_if(thread_task_new(&task, task_wait_for_f, &arg) != 0);
+	unit_fail_if(thread_pool_push_task(p, task) != 0);
+	unit_check(thread_task_timed_join(task, 0, &result) ==
+		TPOOL_ERR_TIMEOUT, "timed out on 0");
+
+	struct timespec ts1, ts2;
+	clock_gettime(CLOCK_MONOTONIC, &ts1);
+	unit_check(thread_task_timed_join(task, 0.1, &result) ==
+		TPOOL_ERR_TIMEOUT, "timeout out on 100 ms");
+	clock_gettime(CLOCK_MONOTONIC, &ts2);
+	uint64_t ns1 = ts1.tv_sec * 1000000000 + ts1.tv_nsec;
+	uint64_t ns2 = ts2.tv_sec * 1000000000 + ts2.tv_nsec;
+	unit_check(ns2 - ns1 > 100000000, "didn't exit too early");
+
+	unit_check(thread_task_timed_join(task, -10000, &result) ==
+		TPOOL_ERR_TIMEOUT, "timeout out on negative timeout");
+
+	clock_gettime(CLOCK_MONOTONIC, &ts1);
+	__atomic_store_n(&arg, 1, __ATOMIC_RELAXED);
+	unit_check(thread_task_timed_join(task, 1, &result) == 0,
+		"joined with 1 sec timeout");
+	clock_gettime(CLOCK_MONOTONIC, &ts2);
+	ns1 = ts1.tv_sec * 1000000000 + ts1.tv_nsec;
+	ns2 = ts2.tv_sec * 1000000000 + ts2.tv_nsec;
+	unit_check(ns2 - ns1 < 1000000000, "1 sec didn't pass");
+
+	unit_fail_if(result != &arg);
+	unit_fail_if(thread_task_delete(task) != 0);
+	unit_fail_if(thread_pool_delete(p) != 0);
+
+	unit_test_finish();
+#endif
+}
+
 int
 main(void)
 {
@@ -212,6 +258,7 @@ main(void)
 	test_push();
 	test_thread_pool_delete();
 	test_thread_pool_max_tasks();
+	test_timed_join();
 
 	unit_test_finish();
 	return 0;
