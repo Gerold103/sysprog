@@ -250,6 +250,42 @@ test_timed_join(void)
 #endif
 }
 
+static void
+test_detach(void)
+{
+#ifdef NEED_DETACH
+	unit_test_start();
+
+	struct thread_pool *p;
+	int arg = 0;
+	struct thread_task *task;
+	unit_fail_if(thread_pool_new(5, &p) != 0);
+	/*
+	 * Push a pack of tasks which should delete themselves. The fact of
+	 * deletion needs to be checked with a sanitizer like heap_help.
+	 */
+	unit_check(true, "detach pushed tasks");
+	for (int i = 0; i < 1000; ++i) {
+		unit_fail_if(thread_task_new(&task, task_incr_f, &arg) != 0);
+		unit_fail_if(thread_pool_push_task(p, task) != 0);
+		if (thread_task_detach(task) != 0)
+			unit_check(false, "detach failed");
+	}
+	while (__atomic_load_n(&arg, __ATOMIC_RELAXED) != 1000)
+		usleep(1000);
+	/*
+	 * Non-pushed task can not be detached.
+	 */
+	unit_fail_if(thread_task_new(&task, task_incr_f, &arg) != 0);
+	unit_check(thread_task_detach(task) == TPOOL_ERR_TASK_NOT_PUSHED,
+		   "detach non-pushed task");
+	unit_fail_if(thread_task_delete(task) != 0);
+	unit_fail_if(thread_pool_delete(p) != 0);
+
+	unit_test_finish();
+#endif
+}
+
 int
 main(void)
 {
@@ -260,6 +296,7 @@ main(void)
 	test_thread_pool_delete();
 	test_thread_pool_max_tasks();
 	test_timed_join();
+	test_detach();
 
 	unit_test_finish();
 	return 0;
