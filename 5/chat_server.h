@@ -70,6 +70,16 @@ int
 chat_server_get_descriptor(const struct chat_server *server);
 
 /**
+ * Get the server's own socket descriptor. Not a multiplexing descriptor like
+ * an epoll or kqueue one, but the original listening descriptor.
+ *
+ * @retval >=0 A valid descriptor.
+ * @retval -1 No descriptor.
+ */
+int
+chat_server_get_socket(const struct chat_server *server);
+
+/**
  * Get a mask of chat_event values wanted by the server. Needed together with
  * server's descriptor for any waiting in poll/epoll/kqueue.
  *

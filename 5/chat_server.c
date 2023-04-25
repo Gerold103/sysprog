@@ -114,6 +114,12 @@ chat_server_get_descriptor(const struct chat_server *server)
 }
 
 int
+chat_server_get_socket(const struct chat_server *server)
+{
+	return server->socket;
+}
+
+int
 chat_server_get_events(const struct chat_server *server)
 {
 	/*
