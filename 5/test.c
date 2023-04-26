@@ -105,7 +105,7 @@ test_basic(void)
 	//
 	c1 = chat_client_new("c1");
 	unit_fail_if(chat_client_connect(c1, make_addr_str(port)) != 0);
-	unit_check(chat_client_feed(c1, "hello", 5) == 0, "feed to client");
+	unit_check(chat_client_feed(c1, "hello\n", 6) == 0, "feed to client");
 	client_consume_events(c1);
 	server_consume_events(s);
 	chat_client_delete(c1);
