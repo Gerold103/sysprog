@@ -2,6 +2,7 @@
 #include "unit.h"
 #include <pthread.h>
 #include <unistd.h>
+#include <stdint.h>
 
 static void
 test_new(void)
