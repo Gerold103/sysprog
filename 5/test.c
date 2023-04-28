@@ -178,6 +178,46 @@ test_big_messages(void)
 	unit_test_finish();
 }
 
+static void
+test_multi_feed(void)
+{
+	unit_test_start();
+
+	struct chat_server *s = chat_server_new();
+	unit_fail_if(chat_server_listen(s, 0) != 0);
+	uint16_t port = server_get_port(s);
+	struct chat_client *c1 = chat_client_new("c1");
+	unit_fail_if(chat_client_connect(c1, make_addr_str(port)) != 0);
+	// Multiple messages in one string still should be split by '\n'. If
+	// there is no '\n' in the end, then data must be accumulated.
+	const char *data = "msg1\nmsg2\nmsg";
+	unit_check(chat_client_feed(c1, data, strlen(data)) == 0,
+		   "feed an incomplete batch");
+	client_consume_events(c1);
+	server_consume_events(s);
+	struct chat_message *msg = chat_server_pop_next(s);
+	unit_check(strcmp(msg->data, "msg1") == 0, "msg1");
+	chat_message_delete(msg);
+	msg = chat_server_pop_next(s);
+	unit_check(strcmp(msg->data, "msg2") == 0, "msg2");
+	chat_message_delete(msg);
+	unit_check(chat_server_pop_next(s) == NULL, "waiting for msg3");
+	unit_check(chat_client_feed(c1, "345", 3) == 0, "feed next part");
+	client_consume_events(c1);
+	server_consume_events(s);
+	unit_check(chat_server_pop_next(s) == NULL, "still waiting for msg3");
+	unit_check(chat_client_feed(c1, "678\n", 4) == 0, "feed next part");
+	client_consume_events(c1);
+	server_consume_events(s);
+	msg = chat_server_pop_next(s);
+	unit_check(strcmp(msg->data, "msg345678") == 0, "msg3");
+	chat_message_delete(msg);
+	chat_client_delete(c1);
+	chat_server_delete(s);
+
+	unit_test_finish();
+}
+
 int
 main(void)
 {
@@ -185,6 +225,7 @@ main(void)
 
 	test_basic();
 	test_big_messages();
+	test_multi_feed();
 
 	unit_test_finish();
 	return 0;
