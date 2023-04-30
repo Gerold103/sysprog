@@ -218,6 +218,87 @@ test_multi_feed(void)
 	unit_test_finish();
 }
 
+static void
+test_multi_client(void)
+{
+	unit_test_start();
+
+	struct chat_server *s = chat_server_new();
+	unit_fail_if(chat_server_listen(s, 0) != 0);
+	uint16_t port = server_get_port(s);
+	int client_count = 100;
+	int msg_count = 1000;
+	uint32_t id_len = 64;
+	uint32_t len = id_len + 1024 * 16;
+	uint32_t size = len + 1;
+	char *data = malloc(size);
+	for (uint32_t i = 0; i < len; ++i)
+		data[i] = 'a' + i % ('z' - 'a' + 1);
+	data[len] = '\n';
+	struct chat_client **clis = malloc(client_count * sizeof(clis[0]));
+	for (int i = 0; i < client_count; ++i) {
+		char name[128];
+		int rc = sprintf(name, "cli_%d", i);
+		// Ignore terminating zero.
+		name[rc] = '0';
+		clis[i] = chat_client_new(name);
+		unit_fail_if(chat_client_connect(
+			clis[i], make_addr_str(port)) != 0);
+		server_consume_events(s);
+	}
+	for (int mi = 0; mi < msg_count; ++mi) {
+		for (int ci = 0; ci < client_count; ++ci) {
+			memset(data, '0', id_len);
+			int rc = sprintf(data, "cli_%d_msg_%d ", ci, mi);
+			// Ignore terminating zero.
+			data[rc] = '0';
+			unit_fail_if(chat_client_feed(clis[ci], data, len) != 0);
+			chat_client_update(clis[ci], 0);
+		}
+		chat_server_update(s, 0);
+	}
+	while (true)
+	{
+		bool have_events = false;
+		for (int i = 0; i < client_count; ++i) {
+			if (chat_client_update(clis[i], 0) == 0)
+				have_events = true;
+		}
+		if (chat_server_update(s, 0) == 0)
+			have_events = true;
+		if (!have_events)
+			break;
+	}
+	for (int i = 0; i < client_count; ++i)
+		chat_client_delete(clis[i]);
+	free(clis);
+	int *msg_counts = calloc(client_count, sizeof(msg_counts[0]));
+	memset(data, '0', id_len);
+	for (int i = 0, end = msg_count * client_count; i < end; ++i) {
+		struct chat_message *msg = chat_server_pop_next(s);
+		unit_fail_if(msg == NULL);
+		int cli_id = -1;
+		int msg_id = -1;
+		int rc = sscanf(msg->data, "cli_%d_msg_%d ", &cli_id, &msg_id);
+		unit_fail_if(rc != 2);
+		unit_fail_if(cli_id > client_count || cli_id < 0);
+		unit_fail_if(msg_id > msg_count || msg_id < 0);
+		unit_fail_if(msg_counts[cli_id] != msg_id);
+		++msg_counts[cli_id];
+
+		uint32_t data_len = strlen(msg->data);
+		unit_fail_if(data_len != len);
+		memset(msg->data, '0', id_len);
+		unit_fail_if(memcmp(msg->data, data, len) != 0);
+		chat_message_delete(msg);
+	}
+	free(msg_counts);
+	chat_server_delete(s);
+	free(data);
+
+	unit_test_finish();
+}
+
 int
 main(void)
 {
@@ -226,6 +307,7 @@ main(void)
 	test_basic();
 	test_big_messages();
 	test_multi_feed();
+	test_multi_client();
 
 	unit_test_finish();
 	return 0;
