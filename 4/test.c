@@ -289,7 +289,7 @@ test_timed_join(void)
 }
 
 static void
-test_detach(void)
+test_detach_stress(void)
 {
 #ifdef NEED_DETACH
 	unit_test_start();
@@ -324,6 +324,29 @@ test_detach(void)
 #endif
 }
 
+static void
+test_detach_long(void)
+{
+#ifdef NEED_DETACH
+	unit_test_start();
+
+	struct thread_pool *p;
+	int arg = 0;
+	unit_fail_if(thread_pool_new(5, &p) != 0);
+	struct thread_task *task;
+	unit_fail_if(thread_task_new(&task, task_wait_for_f, &arg) != 0);
+	unit_fail_if(thread_pool_push_task(p, task) != 0);
+	unit_check(thread_task_detach(task) == 0, "detach a long task");
+	__atomic_store_n(&arg, 1, __ATOMIC_RELAXED);
+	// Might be unable to delete the pool right away - the task needs time
+	// to complete.
+	while (thread_pool_delete(p) != 0)
+		usleep(100);
+
+	unit_test_finish();
+#endif
+}
+
 int
 main(void)
 {
@@ -334,7 +357,8 @@ main(void)
 	test_thread_pool_delete();
 	test_thread_pool_max_tasks();
 	test_timed_join();
-	test_detach();
+	test_detach_stress();
+	test_detach_long();
 
 	unit_test_finish();
 	return 0;
