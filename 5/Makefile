@@ -1,4 +1,4 @@
-GCC_FLAGS = -Wextra -Wpedantic -Werror -Wall -Wno-gnu-folding-constant 
+GCC_FLAGS = -Wextra -Werror -Wall -Wno-gnu-folding-constant
 
 all: lib exe test
 
