@@ -108,11 +108,23 @@ test_basic(void)
 	unit_check(chat_client_feed(c1, "hello\n", 6) == 0, "feed to client");
 	client_consume_events(c1);
 	server_consume_events(s);
-	chat_client_delete(c1);
 	struct chat_message *msg = chat_server_pop_next(s);
 	unit_check(msg != NULL, "server got msg");
 	unit_check(strcmp(msg->data, "hello") == 0, "msg data");
 	chat_message_delete(msg);
+	//
+	// Send a non-zero terminated message.
+	//
+	// Yes, 5, not 10. Send only "msg1\n".
+	unit_check(chat_client_feed(c1, "msg1\nmsg2\n", 5) == 0,
+		   "feed a part of str");
+	client_consume_events(c1);
+	server_consume_events(s);
+	msg = chat_server_pop_next(s);
+	unit_check(strcmp(msg->data, "msg1") == 0, "msg data");
+	chat_message_delete(msg);
+	unit_check(chat_server_pop_next(s) == NULL, "no more messages");
+	chat_client_delete(c1);
 	chat_server_delete(s);
 
 	unit_test_finish();
