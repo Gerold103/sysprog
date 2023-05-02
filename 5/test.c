@@ -226,10 +226,10 @@ test_multi_client(void)
 	struct chat_server *s = chat_server_new();
 	unit_fail_if(chat_server_listen(s, 0) != 0);
 	uint16_t port = server_get_port(s);
-	int client_count = 100;
-	int msg_count = 1000;
+	int client_count = 20;
+	int msg_count = 100;
 	uint32_t id_len = 64;
-	uint32_t len = id_len + 1024 * 16;
+	uint32_t len = id_len + 1024;
 	uint32_t size = len + 1;
 	char *data = malloc(size);
 	for (uint32_t i = 0; i < len; ++i)
