@@ -250,9 +250,7 @@ test_multi_client(void)
 	struct chat_client **clis = malloc(client_count * sizeof(clis[0]));
 	for (int i = 0; i < client_count; ++i) {
 		char name[128];
-		int rc = sprintf(name, "cli_%d", i);
-		// Ignore terminating zero.
-		name[rc] = '0';
+		sprintf(name, "cli_%d", i);
 		clis[i] = chat_client_new(name);
 		unit_fail_if(chat_client_connect(
 			clis[i], make_addr_str(port)) != 0);
