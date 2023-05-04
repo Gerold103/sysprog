@@ -26,7 +26,13 @@ I am client-2!          I am client-2!          I am client-2!
 
 Rules:
 
-- Message end is `\n` (line wrap).
+- Message end is `\n` (line wrap). Note, that '\n' is not a part
+  of the message. It is just a delimiter. I.e. if feed('msg\n') is
+  called, then the peers should return 'msg' from pop(). Note also
+  that feed() can get multiple messages or even their parts:
+  - feed('msg1\nmsg2\n') - pop() returns 'msg1' and 'msg2';
+  - feed('msg1\nms') - pop() returns 'msg1'. 'ms' remains buffered
+    until meets the next '\n'.
 
 - Own messages are not sent back to the client.
 
