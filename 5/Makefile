@@ -13,7 +13,7 @@ exe: lib chat_client_exe.c chat_server_exe.c
 
 test: lib
 	gcc $(GCC_FLAGS) test.c chat.o chat_client.o chat_server.o -o test 	\
-		-I ../utils
+		-I ../utils -lpthread
 
 clean:
 	rm *.o

@@ -4,6 +4,7 @@
 #include "chat_server.h"
 
 #include <arpa/inet.h>
+#include <pthread.h>
 #include <string.h>
 #include <sys/socket.h>
 
@@ -25,7 +26,7 @@ server_get_port(const struct chat_server *s)
 static inline const char *
 make_addr_str(uint16_t port)
 {
-	static char host[128];
+	static __thread char host[128];
 	sprintf(host, "localhost:%u", port);
 	return host;
 }
@@ -310,6 +311,115 @@ test_multi_client(void)
 	unit_test_finish();
 }
 
+struct test_stress_ctx {
+	int msg_count;
+	uint32_t msg_len;
+	int thread_idx;
+	uint16_t port;
+	bool is_running;
+};
+
+static void *
+test_stress_worker_f(void *arg)
+{
+	struct test_stress_ctx *ctx = arg;
+	uint32_t id_len = 64;
+	uint32_t len = ctx->msg_len;
+	uint32_t size = len + 1;
+	int thread_idx = __atomic_fetch_add(
+		&ctx->thread_idx, 1, __ATOMIC_RELAXED);
+	char *data = malloc(size);
+	for (uint32_t i = 0; i < len; ++i)
+		data[i] = 'a' + i % ('z' - 'a' + 1);
+	data[len] = '\n';
+	char name[128];
+	sprintf(name, "cli_%d", thread_idx);
+	struct chat_client *cli = chat_client_new(name);
+	unit_fail_if(chat_client_connect(cli, make_addr_str(ctx->port)) != 0);
+	for (int i = 0; i < ctx->msg_count; ++i) {
+		memset(data, '0', id_len);
+		int rc = sprintf(data, "cli_%d_msg_%d ", thread_idx, i);
+		// Ignore terminating zero.
+		data[rc] = '0';
+		unit_fail_if(chat_client_feed(cli, data, size) != 0);
+		chat_client_update(cli, 0);
+	}
+	while (__atomic_load_n(&ctx->is_running, __ATOMIC_RELAXED)) {
+		int rc = chat_client_update(cli, 0.1);
+		unit_fail_if(rc != 0 && rc != CHAT_ERR_TIMEOUT);
+	}
+	chat_client_delete(cli);
+	free(data);
+	return NULL;
+}
+
+static void
+test_stress(void)
+{
+	unit_test_start();
+
+	struct chat_server *s = chat_server_new();
+	unit_fail_if(chat_server_listen(s, 0) != 0);
+
+	const int client_count = 10;
+	struct test_stress_ctx ctx;
+	ctx.msg_count = 100;
+	ctx.msg_len = 1024;
+	ctx.thread_idx = 0;
+	ctx.port = server_get_port(s);
+	ctx.is_running = true;
+
+	unit_msg("Start client threads");
+	pthread_t threads[client_count];
+	for (int i = 0; i < client_count; ++i) {
+		int rc = pthread_create(&threads[i], NULL,
+			test_stress_worker_f, &ctx);
+		unit_fail_if(rc != 0);
+	}
+	int *msg_counts = calloc(client_count, sizeof(msg_counts[0]));
+	char *data = malloc(ctx.msg_len + 1);
+	for (uint32_t i = 0; i < ctx.msg_len; ++i)
+		data[i] = 'a' + i % ('z' - 'a' + 1);
+	data[ctx.msg_len] = '\n';
+	uint32_t id_len = 64;
+	memset(data, '0', id_len);
+	unit_msg("Receive all messages");
+	for (int i = 0, end = ctx.msg_count * client_count; i < end; ++i) {
+		struct chat_message *msg;
+		while ((msg = chat_server_pop_next(s)) == NULL) {
+			int rc = chat_server_update(s, 0.1);
+			unit_fail_if(rc != 0 && rc != CHAT_ERR_TIMEOUT);
+		}
+		unit_fail_if(msg == NULL);
+		int cli_id = -1;
+		int msg_id = -1;
+		int rc = sscanf(msg->data, "cli_%d_msg_%d ", &cli_id, &msg_id);
+		unit_fail_if(rc != 2);
+		unit_fail_if(cli_id > client_count || cli_id < 0);
+		unit_fail_if(msg_id > ctx.msg_count || msg_id < 0);
+		unit_fail_if(msg_counts[cli_id] != msg_id);
+		++msg_counts[cli_id];
+
+		uint32_t data_len = strlen(msg->data);
+		unit_fail_if(data_len != ctx.msg_len);
+		memset(msg->data, '0', id_len);
+		unit_fail_if(memcmp(msg->data, data, ctx.msg_len) != 0);
+		chat_message_delete(msg);
+	}
+	free(msg_counts);
+	free(data);
+	unit_msg("Clean up the clients");
+	__atomic_store_n(&ctx.is_running, false, __ATOMIC_RELAXED);
+	for (int i = 0; i < client_count; ++i) {
+		void *res;
+		int rc = pthread_join(threads[i], &res);
+		unit_fail_if(rc != 0);
+	}
+	chat_server_delete(s);
+
+	unit_test_finish();
+}
+
 int
 main(void)
 {
@@ -319,6 +429,7 @@ main(void)
 	test_big_messages();
 	test_multi_feed();
 	test_multi_client();
+	test_stress();
 
 	unit_test_finish();
 	return 0;
