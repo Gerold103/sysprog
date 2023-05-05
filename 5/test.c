@@ -49,6 +49,18 @@ client_consume_events(struct chat_client *c)
 	unit_fail_if(rc != CHAT_ERR_TIMEOUT);
 }
 
+static bool
+author_is_eq(const struct chat_message *msg, const char *name)
+{
+#if NEED_AUTHOR
+	return strcmp(msg->author, name) == 0;
+#else
+	(void)msg;
+	(void)name;
+	return true;
+#endif
+}
+
 static void
 test_basic(void)
 {
@@ -112,6 +124,7 @@ test_basic(void)
 	struct chat_message *msg = chat_server_pop_next(s);
 	unit_check(msg != NULL, "server got msg");
 	unit_check(strcmp(msg->data, "hello") == 0, "msg data");
+	unit_check(author_is_eq(msg, "c1"), "msg author");
 	chat_message_delete(msg);
 	//
 	// Send a non-zero terminated message.
@@ -123,6 +136,7 @@ test_basic(void)
 	server_consume_events(s);
 	msg = chat_server_pop_next(s);
 	unit_check(strcmp(msg->data, "msg1") == 0, "msg data");
+	unit_check(author_is_eq(msg, "c1"), "msg author");
 	chat_message_delete(msg);
 	unit_check(chat_server_pop_next(s) == NULL, "no more messages");
 	chat_client_delete(c1);
@@ -163,6 +177,7 @@ test_big_messages(void)
 			size_t msg_len = strlen(msg->data);
 			unit_fail_if(len != msg_len);
 			unit_fail_if(memcmp(msg->data, data, len) != 0);
+			unit_fail_if(!author_is_eq(msg, "c1"));
 			chat_message_delete(msg);
 		}
 	}
@@ -176,6 +191,7 @@ test_big_messages(void)
 			size_t msg_len = strlen(msg->data);
 			unit_fail_if(len != msg_len);
 			unit_fail_if(memcmp(msg->data, data, len) != 0);
+			unit_fail_if(!author_is_eq(msg, "c1"));
 			chat_message_delete(msg);
 		}
 		if (rc1 == CHAT_ERR_TIMEOUT && rc2 == CHAT_ERR_TIMEOUT)
@@ -210,9 +226,11 @@ test_multi_feed(void)
 	server_consume_events(s);
 	struct chat_message *msg = chat_server_pop_next(s);
 	unit_check(strcmp(msg->data, "msg1") == 0, "msg1");
+	unit_check(author_is_eq(msg, "c1"), "msg1 author");
 	chat_message_delete(msg);
 	msg = chat_server_pop_next(s);
 	unit_check(strcmp(msg->data, "msg2") == 0, "msg2");
+	unit_check(author_is_eq(msg, "c1"), "msg2 author");
 	chat_message_delete(msg);
 	unit_check(chat_server_pop_next(s) == NULL, "waiting for msg3");
 	unit_check(chat_client_feed(c1, "345", 3) == 0, "feed next part");
@@ -224,6 +242,7 @@ test_multi_feed(void)
 	server_consume_events(s);
 	msg = chat_server_pop_next(s);
 	unit_check(strcmp(msg->data, "msg345678") == 0, "msg3");
+	unit_check(author_is_eq(msg, "c1"), "msg3 author");
 	chat_message_delete(msg);
 	chat_client_delete(c1);
 	chat_server_delete(s);
@@ -306,6 +325,11 @@ test_multi_client(void)
 		unit_fail_if(data_len != len);
 		memset(msg->data, '0', id_len);
 		unit_fail_if(memcmp(msg->data, data, len) != 0);
+
+		char name[128];
+		sprintf(name, "cli_%d", cli_id);
+		unit_fail_if(!author_is_eq(msg, name));
+
 		chat_message_delete(msg);
 	}
 	free(msg_counts);
@@ -408,6 +432,11 @@ test_stress(void)
 		unit_fail_if(data_len != ctx.msg_len);
 		memset(msg->data, '0', id_len);
 		unit_fail_if(memcmp(msg->data, data, ctx.msg_len) != 0);
+
+		char name[128];
+		sprintf(name, "cli_%d", cli_id);
+		unit_fail_if(!author_is_eq(msg, name));
+
 		chat_message_delete(msg);
 	}
 	free(msg_counts);
