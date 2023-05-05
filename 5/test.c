@@ -248,6 +248,7 @@ test_multi_client(void)
 	for (uint32_t i = 0; i < len; ++i)
 		data[i] = 'a' + i % ('z' - 'a' + 1);
 	data[len] = '\n';
+	unit_msg("Connect clients");
 	struct chat_client **clis = malloc(client_count * sizeof(clis[0]));
 	for (int i = 0; i < client_count; ++i) {
 		char name[128];
@@ -257,6 +258,7 @@ test_multi_client(void)
 			clis[i], make_addr_str(port)) != 0);
 		server_consume_events(s);
 	}
+	unit_msg("Send messages");
 	for (int mi = 0; mi < msg_count; ++mi) {
 		for (int ci = 0; ci < client_count; ++ci) {
 			memset(data, '0', id_len);
@@ -269,6 +271,7 @@ test_multi_client(void)
 		}
 		chat_server_update(s, 0);
 	}
+	unit_msg("Consume all events");
 	while (true)
 	{
 		bool have_events = false;
@@ -284,6 +287,7 @@ test_multi_client(void)
 	for (int i = 0; i < client_count; ++i)
 		chat_client_delete(clis[i]);
 	free(clis);
+	unit_msg("Check all is delivered");
 	int *msg_counts = calloc(client_count, sizeof(msg_counts[0]));
 	memset(data, '0', id_len);
 	for (int i = 0, end = msg_count * client_count; i < end; ++i) {
