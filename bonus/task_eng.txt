@@ -1,0 +1,121 @@
+------------------------------------------------------------------
+Bonus tasks.
+Language: C.
+Deadline: end of the lecture.
+------------------------------------------------------------------
+
+The task is to benchmark some things which appear in daily
+programming. To improve understanding of how much they cost.
+
+You can select one of the tasks, do it, present the code and
+results right away on the lecture. And if there is time - select a
+next task. If there are more people than tasks, then some of the
+tasks might be duplicated.
+
+Each benchmark is basically calling some function or functions in
+a loop many thousands or even millions of times. You have to
+save a timestamp before and after the loop, find the duration, and
+print it. To reduce the amount of noise you need to run the
+benchmark multiple times and use min, max and median durations as
+the result.
+
+For bench parameters you can either try to do it via the command
+line arguments or just as const global variables in the code.
+
+For time measurement you have to use
+clock_gettime(CLOCK_MONOTONIC).
+
+## Clock bench
+Points: 3.
+Bench clock_gettime() with CLOCK_REALTIME, CLOCK_MONOTONIC,
+CLOCK_MONOTONIC_RAW. Run the function with those params 1 mln
+times and see how much time it took.
+
+## Socket throughput
+Points: 5.
+Socket throughput for UNIX and TCP socket pair. You have to create
+a server with socket() + bind() + listen(). Then connect a client
+with connect(). Then accept it with accept(). Now you have a
+socket pair. You need to make it non-blocking.
+
+Then either in 2 separate processes or in 2 threads the client
+should send some big amount of data in batches, and the server
+should receive it all. For example, the client is sending 1 GB in
+16 KB packs in each send(). The server calls recv() with 16 KB
+buffer. You need to make the total size and pack customizable. And
+measure the time to transfer the total size. Try at least
+* 1 GB in 16 KB packs;
+* 1 GB in 1 KB packs;
+* 1 GB in 48 KB packs.
+
+Keep in mind that send() might send less data than it was given.
+
+## Pthread mutex lock
+Points: 4.
+pthread_mutex_lock/unlock in N threads. You need to start N
+threads (customizable number), each is constantly doing mutex
+lock/unlock. For each lock you need to increment a global atomic
+counter. See how much time it takes to do certain amount of
+locks/unlocks depending on thread count. Try at least
+* 1 mln locks with 1 thread;
+* 1 mln locks with 2 threads;
+* 1 mln locks with 3 threads.
+
+## Pthread create + join
+Points: 3.
+You need to create and join a dummy thread with an empty function
+some number of times. To see how much time one create+join costs
+approximately. Do it in a loop 100k times, measure the time per
+one create+join.
+
+## Atomic increment
+Points: 4.
+Atomic increment in N threads. You need to start N threads
+(customizable number), each is constantly doing atomic lock-free
+increment on a certain variable. See how much time it takes to
+reach certain value on that variable depending on thread count and
+memory order. Try at least
+* 1 mln increments with 1 thread and relaxed order;
+* 1 mln increments with 3 threads and relaxed order;
+* 1 mln increments with 3 threads and sequentially consistent
+  order.
+
+## Pthread cond signaling
+Points: 4.
+Need to measure cost of signal vs broadcast depending on thread
+count. You need to start 1 thread doing the signaling and N
+threads doing pthread_cond_wait(). The condvar needs to be
+protected with a mutex. You need to measure how much time it takes
+to make certain number of signaling calls. The signaling thread
+need to either call pthread_cond_signal() or
+pthread_cond_broadcast(). Depending on bench params. Try at least
+these combinations:
+* 1 mln signal()s with 1 wait-thread;
+* 1 mln broadcast()s with 1 wait-thread;
+* 1 mln signal()s with 3 wait-threads;
+* 1 mln broadcast()s with 3 wait-threads.
+
+## False sharing
+Points: 4.
+You need to check how strongly threads can affect each other even
+if they don't access the same data. You need to create an array of
+uint64_t numbers. And then start N threads. Each thread should
+increment its own number in the array in a loop.
+
+Make sure the compiler won't turn the loop into a single +=
+operation. For that you can try to add a check on a dummy volatile
+variable in the loop's condition.
+
+Assuming the threads are in an array, thread with index A should
+use number arr[A]. See how much time it takes for all the threads
+to reach certain value of their numbers.
+
+Then make the threads use numbers on a distance from each other.
+So thread with index A uses number arr[A * 8]. Distance between
+numbers should be at least 64 bytes. Repeat the bench. You need to
+try at least the following combinations:
+* 100 mln increments with 1 thread;
+* 100 mln increments with 2 threads with close numbers;
+* 100 mln increments with 2 threads with distant numbers;
+* 100 mln increments with 3 threads with close numbers;
+* 100 mln increments with 3 threads with distant numbers.
