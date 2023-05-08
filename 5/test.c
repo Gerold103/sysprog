@@ -357,9 +357,6 @@ test_multi_client(void)
 		if (!have_events)
 			break;
 	}
-	for (int i = 0; i < client_count; ++i)
-		chat_client_delete(clis[i]);
-	free(clis);
 	unit_msg("Check all is delivered");
 	test_msg_clear_id(test_msg);
 	int *msg_counts = calloc(client_count, sizeof(msg_counts[0]));
@@ -381,6 +378,34 @@ test_multi_client(void)
 
 		chat_message_delete(msg);
 	}
+	for (int ci = 0; ci < client_count; ++ci) {
+		memset(msg_counts, 0, client_count * sizeof(msg_counts[0]));
+		struct chat_client *cli = clis[ci];
+		// -1 because own messages are not delivered to self.
+		int total_msg_count = msg_count * (client_count - 1);
+		for (int mi = 0; mi < total_msg_count; ++mi) {
+			struct chat_message *msg = chat_client_pop_next(cli);
+			unit_fail_if(msg == NULL);
+			int cli_id = -1;
+			int msg_id = -1;
+			chat_message_extract_id(msg, &cli_id, &msg_id);
+			unit_fail_if(cli_id > client_count || cli_id < 0);
+			unit_fail_if(msg_id > msg_count || msg_id < 0);
+			unit_fail_if(msg_counts[cli_id] != msg_id);
+			++msg_counts[cli_id];
+
+			char name[128];
+			sprintf(name, "cli_%d", cli_id);
+			test_msg_check_data(test_msg, msg->data);
+			unit_fail_if(!author_is_eq(msg, name));
+
+			chat_message_delete(msg);
+		}
+		unit_fail_if(msg_counts[ci] != 0);
+	}
+	for (int i = 0; i < client_count; ++i)
+		chat_client_delete(clis[i]);
+	free(clis);
 	free(msg_counts);
 	chat_server_delete(s);
 	test_msg_delete(test_msg);
@@ -390,6 +415,7 @@ test_multi_client(void)
 
 struct test_stress_ctx {
 	int msg_count;
+	int client_count;
 	uint32_t msg_len;
 	int thread_idx;
 	uint16_t port;
@@ -413,6 +439,34 @@ test_stress_worker_f(void *arg)
 			test_msg->data, test_msg->size) != 0);
 		chat_client_update(cli, 0);
 	}
+	test_msg_clear_id(test_msg);
+	int *msg_counts = calloc(ctx->client_count, sizeof(msg_counts[0]));
+	// -1 because own messages are not delivered to self.
+	int total_msg_count = ctx->msg_count * (ctx->client_count - 1);
+	for (int i = 0; i < total_msg_count; ++i) {
+		struct chat_message *msg;
+		while ((msg = chat_client_pop_next(cli)) == NULL) {
+			int rc = chat_client_update(cli, 0.1);
+			unit_fail_if(rc != 0 && rc != CHAT_ERR_TIMEOUT);
+		}
+		int cli_id = -1;
+		int msg_id = -1;
+		chat_message_extract_id(msg, &cli_id, &msg_id);
+		unit_fail_if(cli_id > ctx->client_count || cli_id < 0);
+		unit_fail_if(msg_id > ctx->msg_count || msg_id < 0);
+		unit_fail_if(msg_counts[cli_id] != msg_id);
+		++msg_counts[cli_id];
+
+		char name[128];
+		sprintf(name, "cli_%d", cli_id);
+		test_msg_check_data(test_msg, msg->data);
+		unit_fail_if(!author_is_eq(msg, name));
+
+		chat_message_delete(msg);
+	}
+	unit_fail_if(msg_counts[thread_idx] != 0);
+	free(msg_counts);
+	test_msg_delete(test_msg);
 	while (__atomic_load_n(&ctx->is_running, __ATOMIC_RELAXED)) {
 		int rc = chat_client_update(cli, 0.1);
 		unit_fail_if(rc != 0 && rc != CHAT_ERR_TIMEOUT);
@@ -433,6 +487,7 @@ test_stress(void)
 	const int client_count = 10;
 	struct test_stress_ctx ctx;
 	ctx.msg_count = 100;
+	ctx.client_count = client_count;
 	ctx.msg_len = 1024;
 	ctx.thread_idx = 0;
 	ctx.port = server_get_port(s);
@@ -454,7 +509,6 @@ test_stress(void)
 			int rc = chat_server_update(s, 0.1);
 			unit_fail_if(rc != 0 && rc != CHAT_ERR_TIMEOUT);
 		}
-		unit_fail_if(msg == NULL);
 		int cli_id = -1;
 		int msg_id = -1;
 		chat_message_extract_id(msg, &cli_id, &msg_id);
