@@ -336,6 +336,8 @@ test_detach_long(void)
 	struct thread_task *task;
 	unit_fail_if(thread_task_new(&task, task_wait_for_f, &arg) != 0);
 	unit_fail_if(thread_pool_push_task(p, task) != 0);
+	// Give it a chance to reach any worker thread.
+	usleep(1000);
 	unit_check(thread_task_detach(task) == 0, "detach a long task");
 	__atomic_store_n(&arg, 1, __ATOMIC_RELAXED);
 	// Might be unable to delete the pool right away - the task needs time
