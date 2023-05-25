@@ -50,6 +50,9 @@ Rules:
 - When something is unclear how it should work, you should test it
   in the real console like /bin/bash and repeat the behaviour.
 
+- The code should be built successfully with these compiler flags:
+  `-Wextra -Werror -Wall -Wno-gnu-folding-constant`.
+
 
 Restrictions:
 
