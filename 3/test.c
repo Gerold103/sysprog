@@ -168,13 +168,13 @@ test_io(void)
 	 */
 	size_t some_size = 1234;
 	assert(sizeof(buffer) > some_size);
-	for (int i = 0; i < some_size; ++i)
+	for (size_t i = 0; i < some_size; ++i)
 		buffer[i] = 'a' + i % ('z' - 'a' + 1);
 	fd1 = ufs_open("file", 0);
 	unit_fail_if(fd1 == -1);
 	size_t progress = 0;
 	while (progress < some_size) {
-		size_t to_write = progress % 123 + 1;
+		ssize_t to_write = progress % 123 + 1;
 		if (to_write + progress > some_size)
 			to_write = some_size - progress;
 		ssize_t rc = ufs_write(fd1, buffer + progress, to_write);
@@ -204,7 +204,7 @@ test_io(void)
 	unit_check(progress == some_size, "read big data in parts");
 	ufs_close(fd1);
 	bool ok = true;
-	for (int i = 0; i < some_size && ok; ++i)
+	for (size_t i = 0; i < some_size && ok; ++i)
 		ok = ok && buffer[i] == 'a' + i % ('z' - 'a' + 1);
 	unit_check(ok, "data is correct");
 

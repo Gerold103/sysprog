@@ -70,6 +70,12 @@ int
 ufs_open(const char *filename, int flags)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	(void)filename;
+	(void)flags;
+	(void)file_list;
+	(void)file_descriptors;
+	(void)file_descriptor_count;
+	(void)file_descriptor_capacity;
 	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
 	return -1;
 }
@@ -78,6 +84,9 @@ ssize_t
 ufs_write(int fd, const char *buf, size_t size)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	(void)fd;
+	(void)buf;
+	(void)size;
 	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
 	return -1;
 }
@@ -86,6 +95,9 @@ ssize_t
 ufs_read(int fd, char *buf, size_t size)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	(void)fd;
+	(void)buf;
+	(void)size;
 	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
 	return -1;
 }
@@ -94,6 +106,7 @@ int
 ufs_close(int fd)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	(void)fd;
 	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
 	return -1;
 }
@@ -102,6 +115,7 @@ int
 ufs_delete(const char *filename)
 {
 	/* IMPLEMENT THIS FUNCTION */
+	(void)filename;
 	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
 	return -1;
 }
