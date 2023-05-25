@@ -56,6 +56,9 @@ coroutine_func_f(void *context)
 int
 main(int argc, char **argv)
 {
+	/* Delete these suppressions when start using the args. */
+	(void)argc;
+	(void)argv;
 	/* Initialize our coroutine global cooperative scheduler. */
 	coro_sched_init();
 	/* Start several coroutines. */

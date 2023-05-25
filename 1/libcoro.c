@@ -159,6 +159,7 @@ coro_this(void)
 static void
 coro_body(int signum)
 {
+	(void)signum;
 	struct coro *c = coro_this_ptr;
 	coro_this_ptr = NULL;
 	/*
