@@ -63,6 +63,9 @@ Rules:
 
 Restrictions:
 
+- Global variables are not allowed (except for the already
+  existing ones).
+
 - The code should have zero busy loops or sleep loops. These are
   only allowed in tests. I.e. in thread_task_join() you can't
   just do 'while (!task->is_finished) {usleep(1)};'. For waiting

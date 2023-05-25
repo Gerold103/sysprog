@@ -46,6 +46,9 @@ Rules:
 
 Restrictions:
 
+- Global variables are not allowed (except for the already
+  existing ones).
+
 - You should not use sleep()/usleep() or any similar function
   anywhere. All waiting for anything has to be done using epoll or
   poll or kqueue.

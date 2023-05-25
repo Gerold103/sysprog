@@ -53,6 +53,9 @@ Rules:
 
 Restrictions:
 
+- Global variables are not allowed (except for the already
+  existing ones).
+
 - Length of command line input is not limited, so you can't read
   it into a buffer of a fixed size. But each line obviously fits
   into the main memory.

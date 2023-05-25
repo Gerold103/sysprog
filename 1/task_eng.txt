@@ -21,6 +21,9 @@ Rules:
 
 Restrictions:
 
+- Global variables are not allowed (except for the already
+  existing ones).
+
 - Sorting should be implemented by you without built-in functions
   like qsort(), system("sort ...") etc.
 
