@@ -455,6 +455,9 @@ main(void)
 	test_rights();
 	test_resize();
 
+	/* Free the memory to make the memory leak detector happy. */
+	ufs_destroy();
+
 	unit_test_finish();
 	return 0;
 }

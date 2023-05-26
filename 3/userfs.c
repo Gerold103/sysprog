@@ -119,3 +119,8 @@ ufs_delete(const char *filename)
 	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
 	return -1;
 }
+
+void
+ufs_destroy(void)
+{
+}

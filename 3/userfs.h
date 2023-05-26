@@ -159,3 +159,11 @@ int
 ufs_resize(int fd, size_t new_size);
 
 #endif
+
+/**
+ * Destroy all the global variables, free all the memory, close and delete all
+ * the files. After the destruction neither of the ufs functions are supposed to
+ * be used. Purpose of the destruction is to reclaim all the dynamic memory.
+ */
+void
+ufs_destroy(void);
