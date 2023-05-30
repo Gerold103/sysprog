@@ -14,32 +14,65 @@ no folders - all files are in "root". Files can be created,
 deleted, opened, closed. Each file's structure is similar to the
 file system FAT: it is a block list. In userfs.c you can look up
 structures which describe a block and a file storing a list of
-blocks. The blocks have fixed size, file size is limited.
+blocks.
 
 Nothing is stored on disk - all is in the main memory, on the
 heap. Files can be read/written-to by their descriptors. API
-strongly resembles the one from libc:
+strongly resembles the one from libc. You can read it fully in
+userfs.h.
 
-int
-ufs_open(const char *filename, int flags);
+The task is to implement this API in the way how it is explained
+in the comments in userfs.h.
 
-ssize_t
-ufs_write(int fd, const char *buf, size_t size);
 
-ssize_t
-ufs_read(int fd, char *buf, size_t size);
+Rules:
 
-int
-ufs_close(int fd);
+- Need to strictly follow the behaviour of each function explained
+  in userfs.h comments.
 
-int
-ufs_delete(const char *filename);
 
-You can read complete descriptions of those functions in userfs.h.
+Restrictions:
 
-Your main task - implement growing of a file while new data is
-being written, and you need to implement a file descriptor. Lets
-inspect a couple of examples.
+- userfs.h can not be changed except for enabling the bonus
+  tasks, see them below.
+
+- The tests can not be changed.
+
+- Global variables are not allowed (except for the already
+  existing ones).
+
+
+Relaxations:
+
+- Can assume that all the data fits into the main memory and
+  memory allocation functions (like malloc()) never fail.
+
+
+Possible solutions:
+
+- 15 points: implement all functions from userfs.h.
+
+- +5 points: implement file opening modes: for reading, writing,
+  reading-and-writing. See NEED_OPEN_FLAGS in userfs.h and in the
+  tests. A file descriptor opened for reading can not be used for
+  writing. And vice-versa. By default the file has to be opened in
+  read-write mode.
+
+- +5 points: implement file resize. See NEED_RESIZE in userfs.h.
+
+- -5 points: (yes, minus, not plus) - you can use C++ and STL
+  containers.
+
+The additional options for +5 points do not include each other.
+That is, you can do none, or do only one, or do only another, or
+both for +10. Or use C++ and get -5 to your sum.
+
+
+Advices:
+
+Your main tasks are - 1) implement file growth when new data is
+being written, 2) implement a file descriptor. Lets inspect a
+couple of examples.
 
 There is code:
 
@@ -87,38 +120,5 @@ This is how it looks now:
 The first block was filled to the end, and 2 new blocks were
 created. They were just appended to the end of the list.
 
-Same with the reading - a descriptor reads sequentially, jumping
-to a next block when the previous one is fully read.
-
-Since the task is to implement a library, there is no 'main'
-function and no input from anywhere. You can write tests in C in a
-separate file with 'main' and which will 'include' your solution.
-For example, make a file main.c, add 'include "userfs.h"', and in
-the function 'main' you do tests. It can all be built like this:
-
-        gcc userfs.c main.c
-
-Possible solutions:
-
-- 15 points: implement all functions from userfs.c, like described
-  above.
-
-- +5 points: implement file opening modes: for reading, writing,
-  read-writing. Then a file is opened, the descriptor stores the
-  mode. When is called a function read/write, the mode is checked.
-  This is it. The flags have to be called UFS_READ_ONLY,
-  UFS_WRITE_ONLY, UFS_READ_WRITE. By default the file has to be
-  opened with UFS_READ_WRITE. In case of an error your have to set
-  the code UFS_ERR_NO_PERMISSION.
-
-- +5 points: implement resize. There is a function
-
-  ufs_resize(int fd, size_t new_size)
-
-  It increases or reduces file size. If a file is shrinking and
-  some file descriptors start pointing beyond file end, they are
-  moved to the new end.
-
-The additional options for +5 points do not include each other.
-That is, you can do none, or do only one, or do only another, or
-both for +10.
+Same with the reading - the descriptor reads sequentially, jumping
+to the next block when the previous one is fully read.
