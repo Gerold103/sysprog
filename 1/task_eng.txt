@@ -18,6 +18,12 @@ Rules:
 - Files have ASCII encoding. I.e. they are plain text. Not unicode
   or anything.
 
+- For time measurements you should use
+  clock_gettime(CLOCK_MONOTONIC). Non-monotonic clocks (such as
+  time(), gettimeofday(), CLOCK_REALTIME, etc) can go backwards
+  sometimes, screwing the time measurements. clock() is monotonic,
+  but doesn't account time spent in blocking syscalls.
+
 
 Restrictions:
 
