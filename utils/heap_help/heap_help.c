@@ -527,7 +527,7 @@ realloc(void *ptr, size_t size)
 		ptr = NULL;
 	void *res = default_realloc(ptr, size);
 	if (ptr == NULL && res != NULL) {
-		alloc_trace_new(ptr, size);
+		alloc_trace_new(res, size);
 	} else if (ptr != NULL && res == NULL) {
 		alloc_free(ptr);
 	} else if (ptr != NULL && res != ptr) {
