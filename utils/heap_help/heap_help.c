@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <execinfo.h>
 #include <netdb.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,6 +92,17 @@ static int (*default_getaddrinfo)(
 static void (*default_freeaddrinfo)(struct addrinfo *) = NULL;
 
 static void
+heaph_printf(const char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	char msg[1024];
+	vsnprintf(msg, sizeof(msg), format, args);
+	va_end(args);
+	write(STDOUT_FILENO, msg, strlen(msg));
+}
+
+static void
 heaph_assert_do(bool flag, const char *expr, int line)
 {
 	if (flag)
@@ -100,12 +112,11 @@ heaph_assert_do(bool flag, const char *expr, int line)
 	volatile const char *err_msg = strerror(err);
 	(void)err;
 	(void)err_msg;
-	char warn[128];
-	sprintf(warn, "HH: assertion failure, line %d", line);
-	write(STDOUT_FILENO, warn, strlen(warn));
-	write(STDOUT_FILENO, "HH: ", 4);
+	heaph_printf("\n");
+	heaph_printf("HH: assertion failure, line %d\n", line);
+	heaph_printf("HH: ");
 	write(STDOUT_FILENO, expr, strlen(expr));
-	write(STDOUT_FILENO, "\n", 1);
+	heaph_printf("\n");
 	abort();
 }
 
@@ -331,7 +342,7 @@ trace_resolve(void *const *addrs, int count, struct symbol *syms)
 	for (int i = 0; i < count; ++i) {
 		struct symbol *s = &syms[i];
 		if (dladdr(addrs[i], &info) == 0) {
-			printf("HH: dladdr() failure\n");
+			heaph_printf("\nHH: dladdr() failure\n");
 			memset(s, 0, sizeof(*s));
 			continue;
 		}
@@ -354,8 +365,9 @@ heaph_atexit(void)
 	if (count == 0) {
 		spinlock_rel(&allocs_lock);
 		if (report_mode == MODE_VERBOSE) {
-			printf("HH: found no leaks\n");
-			printf("HH: total allocation count - %llu\n",
+			heaph_printf("\n");
+			heaph_printf("HH: found no leaks\n");
+			heaph_printf("HH: total allocation count - %llu\n",
 			       (long long)alloc_count_total);
 		}
 		return;
@@ -366,6 +378,10 @@ heaph_atexit(void)
 	int64_t total_count = count;
 	uint64_t leak_size = 0;
 	struct symbol syms[MAX_BACKTRACE_LEN];
+	// People often do not write '\n' in the end of their program. That
+	// makes it harder to read HH output unless the latter prepends itself
+	// with a line wrap.
+	const char *prefix = "\n";
 	for (; a != NULL; a = a->next) {
 		heaph_assert(count > 0);
 		if (a->trace_size == 0) {
@@ -377,10 +393,11 @@ heaph_atexit(void)
 		if (is_internal) {
 			--count;
 		} else if (report_count < report_limit) {
-			printf("#### Leak %d (%zu bytes) ####\n",
-			       ++report_count, a->size);
+			heaph_printf("%s", prefix), prefix = "";
+			heaph_printf("#### Leak %d (%zu bytes) ####\n",
+				     ++report_count, a->size);
 			for (int i = 0; i < a->trace_size; ++i)
-				printf("%d - %s\n", i, syms[i].name);
+				heaph_printf("%d - %s\n", i, syms[i].name);
 		}
 		if (!is_internal)
 			leak_size += a->size;
@@ -390,16 +407,19 @@ heaph_atexit(void)
 	if (count == 0 && report_mode != MODE_VERBOSE)
 		return;
 	int64_t suppressed_count = total_count - count;
-	printf("HH: found %lld leaks (%llu bytes)\n", (long long)count,
-	       (long long)leak_size);
+	heaph_printf("%s", prefix), prefix = "";
+	heaph_printf("HH: found %lld leaks (%llu bytes)\n", (long long)count,
+		     (long long)leak_size);
 	if (suppressed_count != 0) {
-		printf("HH: suppressed %lld internal leaks\n",
-		       (long long)suppressed_count);
+		heaph_printf("HH: suppressed %lld internal leaks\n",
+			     (long long)suppressed_count);
 	}
-	if (report_count < count)
-		printf("HH: only first %d reports are shown\n", report_count);
-	printf("HH: total allocation count - %llu\n",
-	       (long long)alloc_count_total);
+	if (report_count < count) {
+		heaph_printf("HH: only first %d reports are shown\n",
+			     report_count);
+	}
+	heaph_printf("HH: total allocation count - %llu\n",
+		     (long long)alloc_count_total);
 }
 
 static void
