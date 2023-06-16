@@ -224,14 +224,14 @@ alloc_free(void *ptr)
 			int64_t new_count = --alloc_count;
 			spinlock_rel(&allocs_lock);
 
-			heaph_assert(new_count >= 0);
+			heaph_assert(new_count >= 0 && "freeing bad memory");
 			return;
 		}
 		prev = a;
 		a = a->next;
 	}
 	spinlock_rel(&allocs_lock);
-	heaph_assert(false);
+	heaph_assert(!"freeing bad memory");
 }
 
 static void
