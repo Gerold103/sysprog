@@ -49,6 +49,10 @@ Restrictions:
 - Global variables are not allowed (except for the already
   existing ones).
 
+- Memory leaks are not allowed. To check them you can use
+  utils/heap_help tool. Showing zero leak reports from Valgrind or
+  ASAN is not enough - they often miss the leaks.
+
 - You should not use sleep()/usleep() or any similar function
   anywhere. All waiting for anything has to be done using epoll or
   poll or kqueue.
