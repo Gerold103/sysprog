@@ -205,7 +205,7 @@ test_io(void)
 	ufs_close(fd1);
 	bool ok = true;
 	for (size_t i = 0; i < some_size && ok; ++i)
-		ok = ok && buffer[i] == 'a' + i % ('z' - 'a' + 1);
+		ok = ok && buffer[i] == (char)('a' + i % ('z' - 'a' + 1));
 	unit_check(ok, "data is correct");
 
 	ufs_delete("file");
