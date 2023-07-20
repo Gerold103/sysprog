@@ -81,7 +81,7 @@ Relaxations:
 - No need to support multiple redirects like
   'cmd > file1 > file2' or 'cmd > file1 file2'.
 
-- You don't need to support '~' path component in 'cd' command.
+- You don't need to support '~' nor '-' paths in 'cd' command.
 
 
 Input examples:
