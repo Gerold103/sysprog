@@ -108,6 +108,17 @@ server_consume_events(struct chat_server *s)
 	unit_fail_if(rc != CHAT_ERR_TIMEOUT);
 }
 
+static struct chat_message *
+server_pop_next_blocking_from(struct chat_server *s, struct chat_client *c)
+{
+	struct chat_message *msg;
+	while ((msg = chat_server_pop_next(s)) == NULL) {
+		chat_client_update(c, 0);
+		chat_server_update(s, 0);
+	}
+	return msg;
+}
+
 static void
 client_consume_events(struct chat_client *c)
 {
@@ -115,6 +126,17 @@ client_consume_events(struct chat_client *c)
 	while ((rc = chat_client_update(c, 0)) == 0)
 		{};
 	unit_fail_if(rc != CHAT_ERR_TIMEOUT);
+}
+
+static struct chat_message *
+client_pop_next_blocking(struct chat_client *c, struct chat_server *s)
+{
+	struct chat_message *msg;
+	while ((msg = chat_client_pop_next(c)) == NULL) {
+		chat_client_update(c, 0);
+		chat_server_update(s, 0);
+	}
+	return msg;
 }
 
 static bool
@@ -323,16 +345,31 @@ test_multi_client(void)
 	int msg_count = 100;
 	uint32_t len = 1024;
 	struct test_msg *test_msg = test_msg_new(len);
+	struct chat_message *msg;
+	struct chat_client *cli;
 
 	unit_msg("Connect clients");
 	struct chat_client **clis = malloc(client_count * sizeof(clis[0]));
 	for (int i = 0; i < client_count; ++i) {
 		char name[128];
 		sprintf(name, "cli_%d", i);
-		clis[i] = chat_client_new(name);
+		cli = chat_client_new(name);
 		unit_fail_if(chat_client_connect(
-			clis[i], make_addr_str(port)) != 0);
+			cli, make_addr_str(port)) != 0);
 		server_consume_events(s);
+		clis[i] = cli;
+	}
+	unit_msg("Say hello");
+	cli = clis[client_count - 1];
+	unit_fail_if(chat_client_feed(cli, "hello\n", 6) != 0);
+	msg = server_pop_next_blocking_from(s, cli);
+	unit_fail_if(strcmp(msg->data, "hello") != 0);
+	chat_message_delete(msg);
+	for (int i = 0; i < client_count - 1; ++i) {
+		cli = clis[i];
+		msg = client_pop_next_blocking(cli, s);
+		unit_fail_if(strcmp(msg->data, "hello") != 0);
+		chat_message_delete(msg);
 	}
 	unit_msg("Send messages");
 	for (int mi = 0; mi < msg_count; ++mi) {
@@ -357,14 +394,11 @@ test_multi_client(void)
 		if (!have_events)
 			break;
 	}
-	for (int i = 0; i < client_count; ++i)
-		chat_client_delete(clis[i]);
-	free(clis);
 	unit_msg("Check all is delivered");
 	test_msg_clear_id(test_msg);
 	int *msg_counts = calloc(client_count, sizeof(msg_counts[0]));
 	for (int i = 0, end = msg_count * client_count; i < end; ++i) {
-		struct chat_message *msg = chat_server_pop_next(s);
+		msg = chat_server_pop_next(s);
 		unit_fail_if(msg == NULL);
 		int cli_id = -1;
 		int msg_id = -1;
@@ -381,6 +415,33 @@ test_multi_client(void)
 
 		chat_message_delete(msg);
 	}
+	for (int ci = 0; ci < client_count; ++ci) {
+		memset(msg_counts, 0, client_count * sizeof(msg_counts[0]));
+		cli = clis[ci];
+		// -1 because own messages are not delivered to self.
+		int total_msg_count = msg_count * (client_count - 1);
+		for (int mi = 0; mi < total_msg_count; ++mi) {
+			msg = client_pop_next_blocking(cli, s);
+			int cli_id = -1;
+			int msg_id = -1;
+			chat_message_extract_id(msg, &cli_id, &msg_id);
+			unit_fail_if(cli_id > client_count || cli_id < 0);
+			unit_fail_if(msg_id > msg_count || msg_id < 0);
+			unit_fail_if(msg_counts[cli_id] != msg_id);
+			++msg_counts[cli_id];
+
+			char name[128];
+			sprintf(name, "cli_%d", cli_id);
+			test_msg_check_data(test_msg, msg->data);
+			unit_fail_if(!author_is_eq(msg, name));
+
+			chat_message_delete(msg);
+		}
+		unit_fail_if(msg_counts[ci] != 0);
+	}
+	for (int i = 0; i < client_count; ++i)
+		chat_client_delete(clis[i]);
+	free(clis);
 	free(msg_counts);
 	chat_server_delete(s);
 	test_msg_delete(test_msg);
