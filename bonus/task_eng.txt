@@ -25,14 +25,14 @@ line arguments or just as const global variables in the code.
 For time measurement you have to use
 clock_gettime(CLOCK_MONOTONIC).
 
-## Clock bench
+## (1) Clock bench
 Points: 3.
 Bench clock_gettime() with CLOCK_REALTIME, CLOCK_MONOTONIC,
-CLOCK_MONOTONIC_RAW. Run the function with those params 1 mln
-times and see how much time it took.
+CLOCK_MONOTONIC_RAW. Run the function with those params 50 mln
+times and see how much time it took PER ONE CALL.
 
-## Socket throughput
-Points: 5.
+## (2) Socket throughput
+Points: 6.
 Socket throughput for UNIX and TCP socket pair. You have to create
 a server with socket() + bind() + listen(). Then connect a client
 with connect(). Then accept it with accept(). Now you have a
@@ -40,47 +40,49 @@ socket pair. You need to make it non-blocking.
 
 Then either in 2 separate processes or in 2 threads the client
 should send some big amount of data in batches, and the server
-should receive it all. For example, the client is sending 1 GB in
+should receive it all. For example, the client is sending 15 GB in
 16 KB packs in each send(). The server calls recv() with 16 KB
 buffer. You need to make the total size and pack customizable. And
 measure the time to transfer the total size. Try at least
-* 1 GB in 16 KB packs;
-* 1 GB in 1 KB packs;
-* 1 GB in 48 KB packs.
+* 15 GB in 16 KB packs;
+* 15 GB in 1 KB packs;
+* 15 GB in 48 KB packs.
+* 15 GB in 512 B packs.
 
 Keep in mind that send() might send less data than it was given.
 
-## Pthread mutex lock
+## (3) Pthread mutex lock
 Points: 4.
 pthread_mutex_lock/unlock in N threads. You need to start N
 threads (customizable number), each is constantly doing mutex
 lock/unlock. For each lock you need to increment a global atomic
 counter. See how much time it takes to do certain amount of
-locks/unlocks depending on thread count. Try at least
-* 1 mln locks with 1 thread;
-* 1 mln locks with 2 threads;
-* 1 mln locks with 3 threads.
+locks/unlocks depending on thread count, PER ONE LOCK/UNLOCK pair.
+Try at least
+* 10 mln locks with 1 thread;
+* 10 mln locks with 2 threads;
+* 10 mln locks with 3 threads.
 
-## Pthread create + join
-Points: 3.
+## (4) Pthread create + join
+Points: 2.
 You need to create and join a dummy thread with an empty function
 some number of times. To see how much time one create+join costs
-approximately. Do it in a loop 100k times, measure the time per
-one create+join.
+approximately, PER ONE PAIR. Do it in a loop 100k times, measure
+the time per one create+join.
 
-## Atomic increment
-Points: 4.
+## (5) Atomic increment
+Points: 3.
 Atomic increment in N threads. You need to start N threads
 (customizable number), each is constantly doing atomic lock-free
 increment on a certain variable. See how much time it takes to
 reach certain value on that variable depending on thread count and
 memory order. Try at least
-* 1 mln increments with 1 thread and relaxed order;
-* 1 mln increments with 3 threads and relaxed order;
-* 1 mln increments with 3 threads and sequentially consistent
+* 100 mln increments with 1 thread and relaxed order;
+* 100 mln increments with 3 threads and relaxed order;
+* 100 mln increments with 3 threads and sequentially consistent
   order.
 
-## Pthread cond signaling
+## (6) Pthread cond signaling
 Points: 4.
 Need to measure cost of signal vs broadcast depending on thread
 count. You need to start 1 thread doing the signaling and N
@@ -95,7 +97,7 @@ these combinations:
 * 1 mln signal()s with 3 wait-threads;
 * 1 mln broadcast()s with 3 wait-threads.
 
-## False sharing
+## (7) False sharing
 Points: 4.
 You need to check how strongly threads can affect each other even
 if they don't access the same data. You need to create an array of
