@@ -320,6 +320,8 @@ trace_sym_is_internal(const struct symbol *sym)
 		return true;
 	if (trace_sym_is_func(sym, "_IO_printf"))
 		return true;
+	if (trace_sym_is_func(sym, "_IO_puts"))
+		return true;
 	if (trace_sym_is_func(sym, "_IO_vfscanf"))
 		return true;
 	if (trace_sym_file_starts_with(sym, "libpthread.so"))
