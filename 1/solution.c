@@ -10,6 +10,26 @@
  * $> ./a.out
  */
 
+struct my_context {
+	char *name;
+	/** ADD HERE YOUR OWN MEMBERS, SUCH AS FILE NAME, WORK TIME, ... */
+};
+
+static struct my_context *
+my_context_new(const char *name)
+{
+	struct my_context *ctx = malloc(sizeof(*ctx));
+	ctx->name = strdup(name);
+	return ctx;
+}
+
+static void
+my_context_delete(struct my_context *ctx)
+{
+	free(ctx->name);
+	free(ctx);
+}
+
 /**
  * A function, called from inside of coroutines recursively. Just to demonstrate
  * the example. You can split your code into multiple functions, that usually
@@ -34,7 +54,8 @@ coroutine_func_f(void *context)
 	/* IMPLEMENT SORTING OF INDIVIDUAL FILES HERE. */
 
 	struct coro *this = coro_this();
-	char *name = context;
+	struct my_context *ctx = context;
+	char *name = ctx->name;
 	printf("Started coroutine %s\n", name);
 	printf("%s: switch count %lld\n", name, coro_switch_count(this));
 	printf("%s: yield\n", name);
@@ -48,7 +69,8 @@ coroutine_func_f(void *context)
 	other_function(name, 1);
 	printf("%s: switch count after other function %lld\n", name,
 	       coro_switch_count(this));
-	free(name);
+
+	my_context_delete(ctx);
 	/* This will be returned from coro_status(). */
 	return 0;
 }
@@ -74,7 +96,7 @@ main(int argc, char **argv)
 		 * I have to copy the name. Otherwise all the coroutines would
 		 * have the same name when they finally start.
 		 */
-		coro_new(coroutine_func_f, strdup(name));
+		coro_new(coroutine_func_f, my_context_new(name));
 	}
 	/* Wait for all the coroutines to end. */
 	struct coro *c;
