@@ -26,9 +26,9 @@ Rules:
 - The program should print all the same what would be printed by a
   real terminal like /bin/bash.
 
-- You need to use functions pipe(), dup/dup2(), fork(), wait,
-  open, close, at least one of execl/execle/execlp/execv/execvp/
-  execvP.
+- You need to use functions pipe(), dup/dup2(), fork(), wait(),
+  open(), close(), at least one of execl/execle/execlp/execv/execvp/
+  execvP().
 
 - The 'cd' command you need to implement yourself, not via 'exec'
   functions. Because it changes the current working directory of
@@ -83,6 +83,9 @@ Relaxations:
 
 - You don't need to support '~' nor '-' paths in 'cd' command.
 
+- You can use an already existing parser defined in parser.h and .c files, with
+  usage shown in solution.c.
+
 
 Input examples:
 
@@ -111,13 +114,20 @@ Input examples:
     >>> print(1 + 2)
     >>> 3
 
-Points:
+Possible solutions:
 
-  - 15 points: all described above,
-  - 20 points: support operators && and ||,
-  - 25 points: 20 + support &.
+  - 15 points: all described above.
+
+  - +5 points: support operators && and ||.
+
+  - +5 points: support &.
+
   - -5 points: (yes, minus, not plus) - you can use C++ and STL
   containers.
+
+The additional options for +5 points do not include each other.
+That is, you can do none, or do only one, or do only another, or
+both for +10. Or use C++ and get -5 to your sum.
 
 Input: commands and their arguments, input/output redirection operators.
 
@@ -125,27 +135,16 @@ Output: the same what a real terminal prints.
 
 Where to begin? The recommended implementation plan is below:
 
-- Implement command parser. This is an independent part of a solution, and at
-  the same time the simplest in terms of understanding what to do. It is worth
-  doing it in a separate source file, and test independently. Your parser
-  should turn a command like "command arg1 arg2 ... argN" into separate
-  "command" and an array of its arguments. For example, in a form of const char
-  **args, int arg_count. The parser should specially handle |, considering it a
-  command separator.
-  For example, let the parser to parse a command into
+- Get familiar with the parser API.
 
-      struct cmd {
-          const char *name;
-          const char **argv;
-          int argc;
-      }
+- Implement command execution without |, >, >>. Just one command.
 
-  The the parser should return an array of struct cmd. If there are no |, it
-  will contain 1 element;
-
-- Implement command execution without |, >, >>. Just one command;
-
-- Add support for |, >, >>.
+- Add support for |, >, >>. To get started with pipes it might make sense to
+  try and make it work with just a single pipe at first. Can try to do that in a
+  separate source file where you would hardcode 2 commands with a pipe. For
+  example, 'echo 100' and 'grep 100'. Try to make them work via a pipe, outside
+  of the main solution. Once it works, try to make it 3 commands. Once it also
+  works, you will see the pattern and will be able to extend it to N commands.
 
 Architecture of the solution may be the following: there is a process-terminal,
 which reads user commands. On each command it does fork(). The new child
