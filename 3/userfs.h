@@ -152,6 +152,8 @@ ufs_delete(const char *filename);
  * @retval 0 Success.
  * @retval -1 Error occurred.
  *     - UFS_ERR_NO_FILE - invalid file descriptor.
+ *     - UFS_ERR_NO_PERMISSION - descriptor should have been opened with
+ *       UFS_WRITE_ONLY or UFS_READ_WRITE permissions.
  *     - UFS_ERR_NO_MEM - not enough memory. Can appear only when
  *       @a new_size is bigger than the current size.
  */
