@@ -77,6 +77,16 @@ coroutine_func_f(void *context)
 	return 0;
 }
 
+static void writeFile(char *filename, int *numbers, int size)
+{
+	FILE *fptr = fopen(filename, "w");
+	for (int i = 0; i < size; i++)
+	{
+		fprintf(fptr, "%d ", numbers[i]);
+	}
+	fclose(fptr);
+}
+
 static char *readFile(char *filename)
 {
 	FILE *fptr = fopen(filename, "r");
@@ -120,46 +130,24 @@ static int *parseNumbers(char *str, int *arraySize)
 	return numbers;
 }
 
-static int *merge(int numbers[], int left, int middle, int right)
+static int *merge(int *first, int *second, int firstSize, int secondSize)
 {
-	// printf("left: %d, middle: %d, right: %d\n", left, middle, right);
-	int leftNumbersSize = middle - left + 1;
-	int rightNumbersSize = right - middle;
-	// printf("leftNumbersSize: %d, rightNumbersSize: %d\n", leftNumbersSize, rightNumbersSize);
-	int leftNumbers[leftNumbersSize], rightNumbers[rightNumbersSize];
-
-	for (int i = 0; i < leftNumbersSize; i++)
-		leftNumbers[i] = numbers[left + i];
-	for (int j = 0; j < rightNumbersSize; j++)
-		rightNumbers[j] = numbers[middle + 1 + j];
-
-	// for (int i = 0; i < leftNumbersSize; i++)
-	// 	printf("%d ", leftNumbers[i]);
-	// printf("\n");
-	// for (int j = 0; j < rightNumbersSize; j++)
-	// 	printf("%d ", rightNumbers[j]);
-	// printf("\n");
-
-	int i = 0, j = 0;
-	int k = left;
-	while (i < leftNumbersSize || j < rightNumbersSize)
+	int *numbers = malloc(sizeof(int) * (firstSize + secondSize));
+	int i = 0, j = 0, k = 0;
+	while (i < firstSize || j < secondSize)
 	{
-		// printf("i: %d, j: %d, k: %d\n", i, j, k);
-		if (j == rightNumbersSize || (i != leftNumbersSize && leftNumbers[i] <= rightNumbers[j]))
+		if (j == secondSize || (i != firstSize && first[i] <= second[j]))
 		{
-			numbers[k] = leftNumbers[i];
+			numbers[k] = first[i];
 			i++;
 		}
 		else
 		{
-			numbers[k] = rightNumbers[j];
+			numbers[k] = second[j];
 			j++;
 		}
 		k++;
 	}
-	// for (int z = 0; z < k; z++)
-	// 	printf("%d ", numbers[z]);
-	// printf("\n-----------\n");
 	return numbers;
 }
 
@@ -170,43 +158,96 @@ static int *mergeSort(int numbers[], int left, int right)
 	{
 		int middle = left + (right - left) / 2;
 
-		mergeSort(numbers, left, middle);
+		int firstSize = middle - left + 1;
+		int secondSize = right - middle;
+		int *first = malloc(sizeof(int) * firstSize);
+		int *second = malloc(sizeof(int) * secondSize);
+		for (int i = 0; i < firstSize; i++)
+			first[i] = numbers[left + i];
+		for (int i = 0; i < secondSize; i++)
+			second[i] = numbers[middle + 1 + i];
+		int *sortedFirst = mergeSort(first, 0, firstSize - 1);
+		int *sortedSecond = mergeSort(second, 0, secondSize - 1);
 
-		mergeSort(numbers, middle + 1, right);
-
-		newNumbers = merge(numbers, left, middle, right);
+		newNumbers = merge(sortedFirst, sortedSecond, firstSize, secondSize);
 	}
 	return newNumbers;
 }
 
-static int *sortFile(char *filename)
+static int *mergeSortArray(int *numbers[], int sizes[], int left, int right)
 {
-	char *input = readFile(filename);
-
-	char *inputCopy = malloc(sizeof(char) * strlen(input));
-	strcpy(inputCopy, input);
-
-	int arraySize = parseArraySize(inputCopy);
-
-	int *numbers = parseNumbers(input, &arraySize);
-
-	int *sortedNumbers = mergeSort(numbers, 0, arraySize - 1);
-
-	for (int i = 0; i < arraySize; i++)
+	if (left == right)
 	{
-		printf("%d ", sortedNumbers[i]);
+		return numbers[left];
 	}
-	printf("\n-------------------------------\n");
 
-	return sortedNumbers;
+	if (left < right)
+	{
+		int middle = left + (right - left) / 2;
+
+		int firstSize = middle - left + 1;
+		int secondSize = right - middle;
+
+		int *firstHalf[firstSize];
+		int *secondHalf[secondSize];
+		int firstHalfSizes[firstSize];
+		int secondHalfSizes[secondSize];
+
+		for (int i = 0; i < firstSize; i++)
+		{
+			firstHalf[i] = (int *)malloc(sizeof(int) * sizes[left + i]);
+			firstHalf[i] = numbers[left + i];
+			firstHalfSizes[i] = sizes[left + i];
+		}
+		for (int i = 0; i < secondSize; i++)
+		{
+			secondHalf[i] = (int *)malloc(sizeof(int) * sizes[middle + 1 + i]);
+			secondHalf[i] = numbers[middle + 1 + i];
+			secondHalfSizes[i] = sizes[middle + 1 + i];
+		}
+		int *sortedFirst = mergeSortArray(firstHalf, firstHalfSizes, 0, firstSize - 1);
+		int *sortedSecond = mergeSortArray(secondHalf, secondHalfSizes, 0, secondSize - 1);
+
+		int sz1 = 0, sz2 = 0;
+		for (int i = 0; i < firstSize; i++)
+		{
+			sz1 += firstHalfSizes[i];
+		}
+		for (int i = 0; i < secondSize; i++)
+		{
+			sz2 += secondHalfSizes[i];
+		}
+
+		return merge(sortedFirst, sortedSecond, sz1, sz2);
+	}
+
+	return NULL; // Handle an invalid case
 }
 
 int main(int argc, char **argv)
 {
+	int *sortedNumbers[argc];
+	int sizes[argc];
+	int size = 0;
 	for (int i = 1; i < argc; i++)
 	{
-		sortFile(argv[i]);
+		char *input = readFile(argv[i]);
+
+		char *inputCopy = malloc(sizeof(char) * strlen(input));
+		strcpy(inputCopy, input);
+
+		int arraySize = parseArraySize(inputCopy);
+		sizes[i - 1] = arraySize;
+		size += arraySize;
+
+		sortedNumbers[i - 1] = (int *)malloc(arraySize * sizeof(int));
+
+		sortedNumbers[i - 1] = mergeSort(parseNumbers(input, &arraySize), 0, arraySize - 1);
 	}
+
+	int *sortedArray = mergeSortArray(sortedNumbers, sizes, 0, argc - 2);
+
+	writeFile("result.txt", sortedArray, size);
 
 	/* Delete these suppressions when start using the args. */
 	(void)argc;
