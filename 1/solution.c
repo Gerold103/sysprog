@@ -76,52 +76,89 @@ coroutine_func_f(void *context)
 	return 0;
 }
 
+// Merge two subarrays L and M into arr
 void
-swap(int* a, int* b)
+merge(int* arr, int p, int q, int r)
 {
-    int t = *a;
-    *a = *b;
-    *b = t;
+
+	// Create L ← A[p..q] and M ← A[q+1..r]
+	int n1 = q - p + 1;
+	int n2 = r - q;
+
+	int L[n1], M[n2];
+
+	for (int i = 0; i < n1; i++)
+		L[i] = arr[p + i];
+	for (int j = 0; j < n2; j++)
+		M[j] = arr[q + 1 + j];
+
+	// Maintain current index of sub-arrays and main array
+	int i, j, k;
+	i = 0;
+	j = 0;
+	k = p;
+
+	// Until we reach either end of either L or M, pick larger among
+	// elements L and M and place them in the correct position at A[p..r]
+	while (i < n1 && j < n2)
+	{
+		if (L[i] <= M[j]) {
+			arr[k] = L[i];
+			i++;
+		} else {
+			arr[k] = M[j];
+			j++;
+		}
+		k++;
+	}
+
+	// When we run out of elements in either L or M,
+	// pick up the remaining elements and put in A[p..r]
+	while (i < n1)
+	{
+		arr[k] = L[i];
+		i++;
+		k++;
+	}
+
+	while (j < n2)
+	{
+		arr[k] = M[j];
+		j++;
+		k++;
+	}
 }
- 
-int
-partition(int arr[], int low, int high)
-{
-    // Choosing the pivot
-    int pivot = arr[high];
- 
-    // Index of smaller element and indicates
-    // the right position of pivot found so far
-    int i = (low - 1);
- 
-    for (int j = low; j <= high - 1; j++) {
- 
-        // If current element is smaller than the pivot
-        if (arr[j] < pivot) {
- 
-            // Increment index of smaller element
-            i++;
-            swap(&arr[i], &arr[j]);
-        }
-    }
-    swap(&arr[i + 1], &arr[high]);
-    return (i + 1);
-}
- 
+
+// Divide the array into two subarrays, sort them and merge them
 void
-quick_sort(int arr[], int low, int high)
+merge_sort(int* arr, int l, int r)
 {
-    if (low < high) {
- 
-    	// pi is partitioning index, arr[p]
-        // is now at right place
-        int pi = partition(arr, low, high);
- 
-        // Separately sort elements before
-        // partition and after partition
-        quick_sort(arr, low, pi - 1);
-        quick_sort(arr, pi + 1, high);
-    }
+	if (l < r)
+	{
+		// m is the point where the array is divided into two subarrays
+		int m = l + (r - l) / 2;
+
+		merge_sort(arr, l, m);
+		merge_sort(arr, m + 1, r);
+
+		// Merge the sorted subarrays
+		merge(arr, l, m, r);
+	}
+}
+
+int*
+merge_arrays(int* arr_1, int size_1, int* arr_2, int size_2)
+{
+	int size_3 = size_1 + size_2;
+	int* arr_3 =  (int*) malloc(size_3 * sizeof(int));
+	
+	for (int i = 0; i < size_1; i ++)
+		arr_3[i] = arr_1[i];
+	
+	for (int i = 0; i < size_2; i ++)
+		arr_3[i + size_1] = arr_2[i];
+
+	return arr_3;
 }
 
 void
@@ -155,7 +192,7 @@ parse_input(char* input, int* num_items)
 {
 	char* token;
 	int index = 0;
-	 int* numbers = (int*) malloc(*num_items * sizeof(int));
+	int* numbers = (int*) malloc(*num_items * sizeof(int));
 	static const char delim[1] = " ";
 
 	token = strtok(input, delim);
@@ -220,7 +257,12 @@ write_file(char* file_name, int* content, int content_length)
    fclose(fp);
 }
 
-static int*
+struct sortedArray {
+	int* arr;
+	int length;
+};
+
+static struct sortedArray
 sort_file (char* file_name)
 {
 	char* file_string = malloc(sizeof(char));
@@ -235,13 +277,17 @@ sort_file (char* file_name)
 	
 	// print_numbers(numbers, &num_items);
 
-	quick_sort(numbers, 0, num_items);
+	merge_sort(numbers, 0, num_items);
 
 	// print_numbers(numbers, &num_items);
 
 	write_file(file_name, numbers, num_items);
 	
-	return numbers;
+	struct sortedArray ret;
+	ret.arr = numbers;
+	ret.length = num_items;
+
+	return ret;
 }
 
 static int
@@ -307,16 +353,29 @@ main(int argc, char **argv)
 	/* IMPLEMENT MERGING OF THE SORTED ARRAYS HERE. */
 	
 	int num_test_files = count_test_files();
-	int** numbers = (int**) malloc(num_test_files * sizeof(int*));
+	struct sortedArray* numbers = (struct sortedArray*) malloc(num_test_files * sizeof(struct sortedArray*));
 
 	for (int i = 0; i < num_test_files; i ++) {
 		char* file_name = malloc(100 * sizeof(char));
 		sprintf(file_name, "test%d.txt", i + 1);
-		numbers[i] = sort_file(file_name);
+
+		struct sortedArray res = sort_file(file_name);
+
+		numbers[i] = res;
+
+		if (i){
+
+			int *cur_length = &numbers[i].length, *prev_length = &numbers[i - 1].length;
+
+			numbers[i].arr = merge_arrays(numbers[i - 1].arr,  *prev_length, numbers[i].arr, *cur_length);
+			numbers[i].length += *prev_length;
+
+			int m = *prev_length - 1;
+
+			merge(numbers[i].arr, 0, m, *cur_length - 1);
+		}
 	}
 
-	// int temp_num = 10000;
-	// print_numbers(numbers[0], &temp_num);
-	// printf("%d\n", num_test_files);
+	write_file("sum.txt", numbers[num_test_files - 1].arr, numbers[num_test_files - 1].length);
 	return 0;
 }
