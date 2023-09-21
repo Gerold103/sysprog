@@ -86,11 +86,11 @@ static char *readFile(char *filename)
 
 	rewind(fptr);
 
-	char *mystring = malloc(sizeof(char) * size);
-	fgets(mystring, size, fptr);
+	char *fileInput = malloc(sizeof(char) * size);
+	fgets(fileInput, size, fptr);
 	fclose(fptr);
 
-	return mystring;
+	return fileInput;
 }
 
 static int parseArraySize(char *str)
@@ -120,6 +120,65 @@ static int *parseNumbers(char *str, int *arraySize)
 	return numbers;
 }
 
+static int *merge(int numbers[], int left, int middle, int right)
+{
+	// printf("left: %d, middle: %d, right: %d\n", left, middle, right);
+	int leftNumbersSize = middle - left + 1;
+	int rightNumbersSize = right - middle;
+	// printf("leftNumbersSize: %d, rightNumbersSize: %d\n", leftNumbersSize, rightNumbersSize);
+	int leftNumbers[leftNumbersSize], rightNumbers[rightNumbersSize];
+
+	for (int i = 0; i < leftNumbersSize; i++)
+		leftNumbers[i] = numbers[left + i];
+	for (int j = 0; j < rightNumbersSize; j++)
+		rightNumbers[j] = numbers[middle + 1 + j];
+
+	// for (int i = 0; i < leftNumbersSize; i++)
+	// 	printf("%d ", leftNumbers[i]);
+	// printf("\n");
+	// for (int j = 0; j < rightNumbersSize; j++)
+	// 	printf("%d ", rightNumbers[j]);
+	// printf("\n");
+
+	int i = 0, j = 0;
+	int k = left;
+	while (i < leftNumbersSize || j < rightNumbersSize)
+	{
+		// printf("i: %d, j: %d, k: %d\n", i, j, k);
+		if (j == rightNumbersSize || (i != leftNumbersSize && leftNumbers[i] <= rightNumbers[j]))
+		{
+			numbers[k] = leftNumbers[i];
+			i++;
+		}
+		else
+		{
+			numbers[k] = rightNumbers[j];
+			j++;
+		}
+		k++;
+	}
+	// for (int z = 0; z < k; z++)
+	// 	printf("%d ", numbers[z]);
+	// printf("\n-----------\n");
+	return numbers;
+}
+
+static int *mergeSort(int numbers[], int left, int right)
+{
+	int *newNumbers = numbers;
+	if (left < right)
+	{
+		int middle = left + (right - left) / 2;
+
+		mergeSort(numbers, left, middle);
+
+		mergeSort(numbers, middle + 1, right);
+
+		newNumbers = merge(numbers, left, middle, right);
+	}
+	return newNumbers;
+}
+
 int main(int argc, char **argv)
 {
 	char *input = readFile("test.txt");
@@ -131,8 +190,13 @@ int main(int argc, char **argv)
 
 	int *numbers = parseNumbers(input, &arraySize);
 
-	int x = numbers[0];
-	printf("%d\n", x);
+	int *sortedNumbers = mergeSort(numbers, 0, arraySize - 1);
+
+	for (int i = 0; i < arraySize; i++)
+	{
+		printf("%d ", sortedNumbers[i]);
+	}
+	printf("\n");
 
 	/* Delete these suppressions when start using the args. */
 	(void)argc;
