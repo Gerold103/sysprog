@@ -179,9 +179,9 @@ static int *mergeSort(int numbers[], int left, int right)
 	return newNumbers;
 }
 
-int main(int argc, char **argv)
+static int *sortFile(char *filename)
 {
-	char *input = readFile("test.txt");
+	char *input = readFile(filename);
 
 	char *inputCopy = malloc(sizeof(char) * strlen(input));
 	strcpy(inputCopy, input);
@@ -196,7 +196,17 @@ int main(int argc, char **argv)
 	{
 		printf("%d ", sortedNumbers[i]);
 	}
-	printf("\n");
+	printf("\n-------------------------------\n");
+
+	return sortedNumbers;
+}
+
+int main(int argc, char **argv)
+{
+	for (int i = 1; i < argc; i++)
+	{
+		sortFile(argv[i]);
+	}
 
 	/* Delete these suppressions when start using the args. */
 	(void)argc;
