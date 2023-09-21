@@ -123,68 +123,73 @@ quick_sort(int arr[], int low, int high)
     }
 }
 
-// void
-// print_numbers(int* numbers, int* num_items)
-// {
-// 	for (int i = 0; i < *num_items; i ++)
-// 		printf("%d\n", numbers[i]);
-// }
+void
+print_numbers(int* numbers, int* num_items)
+{
+	for (int i = 0; i < *num_items; i ++)
+		printf("%d\n", numbers[i]);
+}
 
-// static int
-// get_num_count(char input)
-// {
-// 	char* token;
-// 	static const char delim[1] = " ";
-// 	int num_count = 0;
+static int
+get_num_count(char* input)
+{
+	static const char delim[1] = " ";
+	int num_count = 0;
 
-// 	token = strtok(&input, delim);
+	for (int i = 0; input[i] != '\0'; i++) 
+	{
+		if (input[i] == *delim)
+     	{
+          num_count ++;
+     	}
+	}
 
-// 	while( token != NULL ) {
-//     	num_count ++;
-// 		token = strtok(NULL, delim);
-//    }
+	num_count ++;
 
-// 	return num_count;
-// }
+	return num_count;
+}
 
-// static int
-// parse_input(char input)
-// {
-// 	char* token;
-// 	const char delim[1] = " ";
-// 	int index = 0;
-// 	static int *numbers;
+static int*
+parse_input(char* input, int* num_items)
+{
+	char* token;
+	int index = 0;
+	 int* numbers = (int*) malloc(*num_items * sizeof(int));
+	static const char delim[1] = " ";
 
-// 	token = strtok(&input, delim);
+	token = strtok(input, delim);
 
-// 	while( token != NULL ) {
-// 		numbers[index] = atoi(token);
-// 		token = strtok(NULL, delim);
-// 		index ++;
-// 	}
+	while( token != NULL )
+	{
+		numbers[index] = atoi(token);
+		token = strtok(NULL, delim);
+		index ++;
+	}
 
-// 	return *numbers;
-// }
+	return numbers;
+}
 
-// static void
-// read_file(char* buffer, char *file_name)
-// {
-// 	FILE* fp;
-// 	long num_bytes;
+static char*
+read_file(char *file_name)
+{
+	FILE* fp;
+	long num_bytes;
 
-// 	fp = fopen(file_name, "r");
+	fp = fopen(file_name, "r");
 
-// 	fseek(fp, 0, SEEK_END);
-// 	num_bytes = ftell(fp);
+	fseek(fp, 0, SEEK_END);
+	num_bytes = ftell(fp);
 
-// 	fseek(fp, 0, SEEK_SET);
+	fseek(fp, 0, SEEK_SET);
 
-// 	buffer = (char*) calloc(num_bytes, sizeof(char));
+	char* buffer = (char*) calloc(num_bytes, sizeof(char));
 
-// 	fread(buffer, sizeof(char), num_bytes, fp);
+	fread(buffer, sizeof(char), num_bytes, fp);
 
-// 	fclose(fp);
-// }
+	fclose(fp);
+
+	return buffer;
+}
 
 int
 main(int argc, char **argv)
@@ -227,69 +232,19 @@ main(int argc, char **argv)
 	char* file_name = "test1.txt";
 	char* file_string = malloc(sizeof(char));
 
-	// TODO: read_file func
-
-	FILE* fp;
-	long num_bytes;
-
-	fp = fopen(file_name, "r");
-
-	fseek(fp, 0, SEEK_END);
-	num_bytes = ftell(fp);
-
-	fseek(fp, 0, SEEK_SET);
-
-	file_string = (char*) calloc(num_bytes, sizeof(char));
-
-	fread(file_string, sizeof(char), num_bytes, fp);
-
-	fclose(fp);
-
+	file_string = read_file(file_name);
 	printf("%s\n", file_string);
 
-	// TODO: get_num_count func
-	// int num_items = get_num_count(*file_string);
+	int num_items = get_num_count(file_string);
+	printf("%d\n", num_items);
 
-	static const char delim[1] = " ";
-	int num_count = 0;
+	int* numbers = parse_input(file_string, &num_items);
+	
+	print_numbers(numbers, &num_items);
 
-	for (int i = 0; file_string[i] != '\0'; i++) 
-	{
-		if (file_string[i] == *delim)
-     	{
-          num_count ++;
-     	}
-	}
+	quick_sort(numbers, 0, num_items);
 
-	num_count ++;
-
-	printf("%d\n", num_count);
-
-	// TODO: parse_input func
-	// int numbers = parse_input(*file_string);
-	char* token;
-	int index = 0;
-	int numbers[num_count];
-
-	token = strtok(file_string, delim);
-
-	while( token != NULL )
-	{
-		numbers[index] = atoi(token);
-		token = strtok(NULL, delim);
-		index ++;
-	}
-
-	// TODO: print_numbers func
-	// print_numbers(numbers, &num_count);
-
-	for (int i = 0; i < num_count; i ++)
-		printf("%d\n", numbers[i]);
-
-	quick_sort(numbers, 0, num_count);
-
-	for (int i = 0; i < num_count; i ++)
-		printf("%d\n", numbers[i]);
+	print_numbers(numbers, &num_items);
 
 	return 0;
 }
