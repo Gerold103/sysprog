@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 #include "libcoro.h"
 
 /**
@@ -177,6 +178,11 @@ read_file(char *file_name)
 
 	fp = fopen(file_name, "r");
 
+	if(fp == NULL) {
+      printf("Error: could not open file %s\n", file_name);
+      exit(1);
+   }
+
 	fseek(fp, 0, SEEK_END);
 	num_bytes = ftell(fp);
 
@@ -189,6 +195,77 @@ read_file(char *file_name)
 	fclose(fp);
 
 	return buffer;
+}
+
+static void
+write_file(char* file_name, int* content, int content_length)
+{
+	FILE* fp;
+
+	fp = fopen(file_name, "w");
+
+	if(fp == NULL) {
+    	printf("Error: could not open file %s\n", file_name);
+    	exit(1);
+   	}
+
+	// printf("%d\n%s\n", content_length, file_name);
+
+	for(int i = 0; i < content_length; i++) {
+    	fprintf(fp, "%d ", content[i]);
+   }
+
+   printf("Success: wrote to file %s\n", file_name);
+
+   fclose(fp);
+}
+
+static int*
+sort_file (char* file_name)
+{
+	char* file_string = malloc(sizeof(char));
+
+	file_string = read_file(file_name);
+	// printf("%s\n", file_string);
+
+	int num_items = get_num_count(file_string);
+	// printf("%d\n", num_items);
+
+	int* numbers = parse_input(file_string, &num_items);
+	
+	// print_numbers(numbers, &num_items);
+
+	quick_sort(numbers, 0, num_items);
+
+	// print_numbers(numbers, &num_items);
+
+	write_file(file_name, numbers, num_items);
+	
+	return numbers;
+}
+
+static int
+count_test_files() {
+   DIR* dir;
+   struct dirent* entry;
+   int count = 0;
+
+   dir = opendir(".");
+
+   if(dir == NULL) {
+      printf("Error: could not open directory\n");
+      exit(1);
+   }
+
+   while((entry = readdir(dir)) != NULL) {
+      if(strncmp(entry->d_name, "test", 4) == 0) {
+         count ++;
+      }
+   }
+
+   closedir(dir);
+
+   return count;
 }
 
 int
@@ -229,22 +306,17 @@ main(int argc, char **argv)
 
 	/* IMPLEMENT MERGING OF THE SORTED ARRAYS HERE. */
 	
-	char* file_name = "test1.txt";
-	char* file_string = malloc(sizeof(char));
+	int num_test_files = count_test_files();
+	int** numbers = (int**) malloc(num_test_files * sizeof(int*));
 
-	file_string = read_file(file_name);
-	printf("%s\n", file_string);
+	for (int i = 0; i < num_test_files; i ++) {
+		char* file_name = malloc(100 * sizeof(char));
+		sprintf(file_name, "test%d.txt", i + 1);
+		numbers[i] = sort_file(file_name);
+	}
 
-	int num_items = get_num_count(file_string);
-	printf("%d\n", num_items);
-
-	int* numbers = parse_input(file_string, &num_items);
-	
-	print_numbers(numbers, &num_items);
-
-	quick_sort(numbers, 0, num_items);
-
-	print_numbers(numbers, &num_items);
-
+	// int temp_num = 10000;
+	// print_numbers(numbers[0], &temp_num);
+	// printf("%d\n", num_test_files);
 	return 0;
 }
