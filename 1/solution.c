@@ -3,6 +3,7 @@
 #include <string.h>
 #include "libcoro.h"
 #include <malloc.h>
+#include "../utils/heap_help/heap_help.h"
 
 /**
  * You can compile and run this code using the commands:
@@ -87,7 +88,7 @@ static void writeFile(char *filename, int *numbers, int size)
 	fclose(fptr);
 }
 
-static char *readFile(char *filename)
+static char *readFile(char *filename) // one alloc that is freed in main
 {
 	FILE *fptr = fopen(filename, "r");
 
@@ -103,7 +104,7 @@ static char *readFile(char *filename)
 	return fileInput;
 }
 
-static int parseArraySize(char *str)
+static int parseArraySize(char *str) // no allocs
 {
 	int size = 0;
 	char *token = strtok(str, " ");
@@ -116,7 +117,7 @@ static int parseArraySize(char *str)
 	return size;
 }
 
-static int *parseNumbers(char *str, int *arraySize)
+static int *parseNumbers(char *str, int *arraySize) // one alloc that is freed in main
 {
 	int i = 0;
 	int *numbers = malloc(sizeof(int) * *arraySize);
@@ -153,7 +154,10 @@ static int *merge(int *first, int *second, int firstSize, int secondSize)
 
 static int *mergeSort(int numbers[], int left, int right)
 {
-	int *newNumbers = numbers;
+	if (left == right)
+	{
+		return numbers;
+	}
 	if (left < right)
 	{
 		int middle = left + (right - left) / 2;
@@ -169,9 +173,19 @@ static int *mergeSort(int numbers[], int left, int right)
 		int *sortedFirst = mergeSort(first, 0, firstSize - 1);
 		int *sortedSecond = mergeSort(second, 0, secondSize - 1);
 
-		newNumbers = merge(sortedFirst, sortedSecond, firstSize, secondSize);
+		free(first);
+		free(second);
+
+		int *sorted = merge(sortedFirst, sortedSecond, firstSize, secondSize);
+
+		if (firstSize > 1)
+			free(sortedFirst);
+		if (secondSize > 1)
+			free(sortedSecond);
+
+		return sorted;
 	}
-	return newNumbers;
+	return NULL;
 }
 
 static int *mergeSortArray(int *numbers[], int sizes[], int left, int right)
@@ -195,18 +209,29 @@ static int *mergeSortArray(int *numbers[], int sizes[], int left, int right)
 
 		for (int i = 0; i < firstSize; i++)
 		{
-			firstHalf[i] = (int *)malloc(sizeof(int) * sizes[left + i]);
+			// firstHalf[i] = (int *)malloc(sizeof(int) * sizes[left + i]);
 			firstHalf[i] = numbers[left + i];
 			firstHalfSizes[i] = sizes[left + i];
 		}
 		for (int i = 0; i < secondSize; i++)
 		{
-			secondHalf[i] = (int *)malloc(sizeof(int) * sizes[middle + 1 + i]);
+			// secondHalf[i] = (int *)malloc(sizeof(int) * sizes[middle + 1 + i]);
 			secondHalf[i] = numbers[middle + 1 + i];
 			secondHalfSizes[i] = sizes[middle + 1 + i];
 		}
 		int *sortedFirst = mergeSortArray(firstHalf, firstHalfSizes, 0, firstSize - 1);
 		int *sortedSecond = mergeSortArray(secondHalf, secondHalfSizes, 0, secondSize - 1);
+
+		// for (int i = 0; i < firstSize; i++)
+		// {
+		// 	if (firstHalfSizes[i] > 1)
+		// 		free(firstHalf[i]);
+		// }
+		// for (int i = 0; i < secondSize; i++)
+		// {
+		// 	if (secondHalfSizes[i] > 1)
+		// 		free(secondHalf[i]);
+		// }
 
 		int sz1 = 0, sz2 = 0;
 		for (int i = 0; i < firstSize; i++)
@@ -218,7 +243,14 @@ static int *mergeSortArray(int *numbers[], int sizes[], int left, int right)
 			sz2 += secondHalfSizes[i];
 		}
 
-		return merge(sortedFirst, sortedSecond, sz1, sz2);
+		int *sorted = merge(sortedFirst, sortedSecond, sz1, sz2);
+
+		if (firstSize > 1)
+			free(sortedFirst);
+		if (secondSize > 1)
+			free(sortedSecond);
+
+		return sorted;
 	}
 
 	return NULL; // Handle an invalid case
@@ -239,15 +271,28 @@ int main(int argc, char **argv)
 		int arraySize = parseArraySize(inputCopy);
 		sizes[i - 1] = arraySize;
 		size += arraySize;
+		printf("arraySize: %d\n", arraySize);
 
-		sortedNumbers[i - 1] = (int *)malloc(arraySize * sizeof(int));
+		// sortedNumbers[i - 1] = (int *)malloc(arraySize * sizeof(int));
 
-		sortedNumbers[i - 1] = mergeSort(parseNumbers(input, &arraySize), 0, arraySize - 1);
+		int *numbers = parseNumbers(input, &arraySize);
+
+		sortedNumbers[i - 1] = mergeSort(numbers, 0, arraySize - 1);
+		free(inputCopy);
+		free(input);
+		free(numbers);
 	}
 
 	int *sortedArray = mergeSortArray(sortedNumbers, sizes, 0, argc - 2);
 
 	writeFile("result.txt", sortedArray, size);
+	if (argc > 2)
+		free(sortedArray);
+
+	for (int i = 0; i < argc - 1; i++)
+	{
+		free(sortedNumbers[i]);
+	}
 
 	/* Delete these suppressions when start using the args. */
 	(void)argc;
