@@ -250,19 +250,16 @@ write_file(char* file_name, int* content, int content_length)
 }
 
 /**
- * A function that takes 2 arrays and their corresponding lengths
- * appends them together in a third array given as a parameter
+ A function that appends one array to another given the arrays
+ * and their lengths as parameters
  * P.S: make sure first param has enough memory
  */
-// static void
-// merge_arrays(int* arr_3, int* arr_1, int length_1, int* arr_2, int length_2)
-// {
-// 	for (int i = 0; i < length_1; i ++)
-// 		arr_3[i] = arr_1[i];
-	
-// 	for (int i = 0; i < length_2; i ++)
-// 		arr_3[i + length_1] = arr_2[i];
-// }
+static void
+append_array(int* arr_1, int length_1, int* arr_2, int length_2)
+{	
+	for (int i = 0; i < length_2; i ++)
+		arr_1[i + length_1] = arr_2[i];
+}
 
 // Merge sort
 void
@@ -414,13 +411,21 @@ main(int argc, char **argv)
 		malloc(total_num_items * sizeof(int)), 0
 	};
 
-	// for (int i = 0; i < num_test_files; i ++)
-	// {
+	for (int i = 0; i < num_test_files; i ++)
+	{
+		
+		append_array(accumulator.arr, accumulator.length, all_sorted[i].arr, all_sorted[i].length);
 
-	// }
+		if (i)
+		{	int m = accumulator.length - 1;
+			int r = m + all_sorted[i].length;
+			merge_and_sort(accumulator.arr, 0, m, r);
+		}
 
-	// printf("%ld\n", total_num_items);
-	printf("%d\n", accumulator.length);
+		accumulator.length = all_sorted[i].length;
+	}
+
+	write_file("sum.txt", accumulator.arr, accumulator.length);
 
 	for (int i = 0; i < num_test_files; i ++)
 	{
