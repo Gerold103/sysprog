@@ -146,27 +146,22 @@ merge_sort(int* arr, int l, int r)
 	}
 }
 
-int*
-merge_arrays(int* arr_1, int size_1, int* arr_2, int size_2)
+void
+merge_arrays(int* arr_3, int* arr_1, int size_1, int* arr_2, int size_2)
 {
-	int size_3 = size_1 + size_2;
-	int* arr_3 =  (int*) malloc(size_3 * sizeof(int));
-	
 	for (int i = 0; i < size_1; i ++)
 		arr_3[i] = arr_1[i];
 	
 	for (int i = 0; i < size_2; i ++)
 		arr_3[i + size_1] = arr_2[i];
-
-	return arr_3;
 }
 
-void
-print_numbers(int* numbers, int* num_items)
-{
-	for (int i = 0; i < *num_items; i ++)
-		printf("%d\n", numbers[i]);
-}
+// static void
+// print_numbers(int* numbers, int* num_items)
+// {
+// 	for (int i = 0; i < *num_items; i ++)
+// 		printf("%d\n", numbers[i]);
+// }
 
 static int
 get_num_count(char* input)
@@ -187,12 +182,12 @@ get_num_count(char* input)
 	return num_count;
 }
 
-static int*
-parse_input(char* input, int* num_items)
+static void
+parse_input(int* numbers, char* input)
 {
 	char* token;
 	int index = 0;
-	int* numbers = (int*) malloc(*num_items * sizeof(int));
+
 	static const char delim[1] = " ";
 
 	token = strtok(input, delim);
@@ -203,12 +198,10 @@ parse_input(char* input, int* num_items)
 		token = strtok(NULL, delim);
 		index ++;
 	}
-
-	return numbers;
 }
 
-static char*
-read_file(char *file_name)
+static long
+get_file_num_bytes(char* file_name)
 {
 	FILE* fp;
 	long num_bytes;
@@ -223,9 +216,22 @@ read_file(char *file_name)
 	fseek(fp, 0, SEEK_END);
 	num_bytes = ftell(fp);
 
-	fseek(fp, 0, SEEK_SET);
+	fclose(fp);
 
-	char* buffer = (char*) calloc(num_bytes, sizeof(char));
+	return num_bytes;
+}
+
+static char*
+read_file(char* buffer, char *file_name, long num_bytes)
+{
+	FILE* fp;
+
+	fp = fopen(file_name, "r");
+
+	if(fp == NULL) {
+      printf("Error: could not open file %s\n", file_name);
+      exit(1);
+   }
 
 	fread(buffer, sizeof(char), num_bytes, fp);
 
@@ -262,19 +268,25 @@ struct sortedArray {
 	int length;
 };
 
-static struct sortedArray
-sort_file (char* file_name)
+static void
+sort_file (struct sortedArray* file_sort_res, char* file_name)
 {
-	char* file_string = malloc(sizeof(char));
+	long num_bytes = get_file_num_bytes(file_name);
 
-	file_string = read_file(file_name);
+	char* file_string = (char*) calloc(num_bytes, sizeof(char));
+
+	read_file(file_string, file_name, num_bytes);
 	// printf("%s\n", file_string);
 
 	int num_items = get_num_count(file_string);
 	// printf("%d\n", num_items);
 
-	int* numbers = parse_input(file_string, &num_items);
+	int* numbers = (int*) malloc(num_items * sizeof(int));
+
+	parse_input(numbers, file_string);
 	
+	free(file_string);
+
 	// print_numbers(numbers, &num_items);
 
 	merge_sort(numbers, 0, num_items);
@@ -283,35 +295,42 @@ sort_file (char* file_name)
 
 	write_file(file_name, numbers, num_items);
 	
-	struct sortedArray ret;
-	ret.arr = numbers;
-	ret.length = num_items;
-
-	return ret;
+	file_sort_res->arr = numbers;
+	file_sort_res->length = num_items;
 }
 
 static int
 count_test_files() {
-   DIR* dir;
-   struct dirent* entry;
-   int count = 0;
+	DIR* dir;
+	struct dirent* entry;
+	int count = 0;
 
-   dir = opendir(".");
+	dir = opendir(".");
 
-   if(dir == NULL) {
-      printf("Error: could not open directory\n");
-      exit(1);
-   }
+	if(dir == NULL) {
+		printf("Error: could not open directory\n");
+		exit(1);
+	}
 
-   while((entry = readdir(dir)) != NULL) {
-      if(strncmp(entry->d_name, "test", 4) == 0) {
-         count ++;
-      }
-   }
+	while((entry = readdir(dir)) != NULL) {
+		if(strncmp(entry->d_name, "test", 4) == 0) {
+			count ++;
+		}
+	}
 
-   closedir(dir);
+	closedir(dir);
+	return count;
+}
 
-   return count;
+static void
+delete_file_data(struct sortedArray* sorted_array, int arr_size)
+{
+	for (int i = 0; i < arr_size; i ++)
+		free(sorted_array[i].arr);
+	
+	free(sorted_array);
+
+	return;
 }
 
 int
@@ -353,29 +372,42 @@ main(int argc, char **argv)
 	/* IMPLEMENT MERGING OF THE SORTED ARRAYS HERE. */
 	
 	int num_test_files = count_test_files();
-	struct sortedArray* numbers = (struct sortedArray*) malloc(num_test_files * sizeof(struct sortedArray*));
+	struct sortedArray* numbers = (struct sortedArray*) malloc(sizeof(struct sortedArray*));
 
 	for (int i = 0; i < num_test_files; i ++) {
 		char* file_name = malloc(100 * sizeof(char));
 		sprintf(file_name, "test%d.txt", i + 1);
 
-		struct sortedArray res = sort_file(file_name);
-
+		struct sortedArray res;
+		sort_file(&res, file_name);
 		numbers[i] = res;
 
 		if (i){
 
 			int *cur_length = &numbers[i].length, *prev_length = &numbers[i - 1].length;
-
-			numbers[i].arr = merge_arrays(numbers[i - 1].arr,  *prev_length, numbers[i].arr, *cur_length);
-			numbers[i].length += *prev_length;
+			int merge_size = *prev_length + *cur_length;
+			int* merge_res =  (int*) malloc(merge_size * sizeof(int));
+			merge_arrays(merge_res, numbers[i - 1].arr,  *prev_length, numbers[i].arr, *cur_length);
+			
+			numbers[i].arr = merge_res;
+			numbers[i].length = merge_size;
 
 			int m = *prev_length - 1;
 
 			merge(numbers[i].arr, 0, m, *cur_length - 1);
 		}
+
+		if (i == num_test_files - 1)
+		{	
+			free(file_name);
+			free(res.arr);
+		}
+			
 	}
 
 	write_file("sum.txt", numbers[num_test_files - 1].arr, numbers[num_test_files - 1].length);
+
+	delete_file_data(numbers, num_test_files);
+
 	return 0;
 }
