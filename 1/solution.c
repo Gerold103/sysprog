@@ -373,9 +373,9 @@ main(int argc, char **argv)
 	
 	int num_test_files = count_test_files();
 	struct sortedArray* numbers = (struct sortedArray*) malloc(sizeof(struct sortedArray*));
+	char* file_name = malloc(100 * sizeof(char));
 
 	for (int i = 0; i < num_test_files; i ++) {
-		char* file_name = malloc(100 * sizeof(char));
 		sprintf(file_name, "test%d.txt", i + 1);
 
 		struct sortedArray res;
@@ -396,17 +396,10 @@ main(int argc, char **argv)
 
 			merge(numbers[i].arr, 0, m, *cur_length - 1);
 		}
-
-		if (i == num_test_files - 1)
-		{	
-			free(file_name);
-			free(res.arr);
-		}
-			
 	}
-
+	
+	free(file_name);
 	write_file("sum.txt", numbers[num_test_files - 1].arr, numbers[num_test_files - 1].length);
-
 	delete_file_data(numbers, num_test_files);
 
 	return 0;
