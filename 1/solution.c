@@ -400,17 +400,34 @@ main(int argc, char **argv)
 
 	int num_test_files = count_test_files();
 	char* file_name = malloc(100 * sizeof(char));
+	struct sortedArray* all_sorted = malloc(num_test_files * sizeof(*all_sorted));
+	long total_num_items = 0;
 
 	for (int i = 0; i < num_test_files; i ++)
 	{
 		sprintf(file_name, "test%d.txt", i + 1);
-
-		struct sortedArray res;
-		sort_file(&res, file_name);
-
-		free(res.arr);
+		sort_file(&all_sorted[i], file_name);
+		total_num_items += all_sorted[i].length;
 	}
 
+	struct sortedArray accumulator = {
+		malloc(total_num_items * sizeof(int)), 0
+	};
+
+	// for (int i = 0; i < num_test_files; i ++)
+	// {
+
+	// }
+
+	// printf("%ld\n", total_num_items);
+	printf("%d\n", accumulator.length);
+
+	for (int i = 0; i < num_test_files; i ++)
+	{
+		free(all_sorted[i].arr);
+	}
+	free(all_sorted);
+	free(accumulator.arr);
 	free(file_name);
 
 	return 0;
