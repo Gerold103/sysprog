@@ -13,21 +13,27 @@
 
 struct my_context {
 	char *name;
+	struct sortedArray* file_sort_res;
+	char* file_name;
 	/** ADD HERE YOUR OWN MEMBERS, SUCH AS FILE NAME, WORK TIME, ... */
 };
 
 static struct my_context *
-my_context_new(const char *name)
+my_context_new(const char *name, char* file_name, struct sortedArray* file_sort_res)
 {
 	struct my_context *ctx = malloc(sizeof(*ctx));
-	ctx->name = strdup(name);
+	ctx -> name = strdup(name);
+	ctx -> file_name = strdup(file_name);
+	ctx -> file_sort_res = file_sort_res;
 	return ctx;
 }
 
 static void
 my_context_delete(struct my_context *ctx)
 {
+	// TODO: Possiblity a problem here with the last prop not being freed
 	free(ctx->name);
+	free(ctx->file_name);
 	free(ctx);
 }
 
@@ -36,45 +42,45 @@ my_context_delete(struct my_context *ctx)
  * the example. You can split your code into multiple functions, that usually
  * helps to keep the individual code blocks simple.
  */
-static void
-other_function(const char *name, int depth)
-{
-	printf("%s: entered function, depth = %d\n", name, depth);
-	coro_yield();
-	if (depth < 3)
-		other_function(name, depth + 1);
-}
+// static void
+// other_function(const char *name, int depth)
+// {
+// 	printf("%s: entered function, depth = %d\n", name, depth);
+// 	coro_yield();
+// 	if (depth < 3)
+// 		other_function(name, depth + 1);
+// }
 
 /**
  * Coroutine body. This code is executed by all the coroutines. Here you
  * implement your solution, sort each individual file.
  */
-static int
-coroutine_func_f(void *context)
-{
-	/* IMPLEMENT SORTING OF INDIVIDUAL FILES HERE. */
+// static int
+// coroutine_func_f(void *context)
+// {
+// 	/* IMPLEMENT SORTING OF INDIVIDUAL FILES HERE. */
 
-	struct coro *this = coro_this();
-	struct my_context *ctx = context;
-	char *name = ctx->name;
-	printf("Started coroutine %s\n", name);
-	printf("%s: switch count %lld\n", name, coro_switch_count(this));
-	printf("%s: yield\n", name);
-	coro_yield();
+// 	struct coro *this = coro_this();
+// 	struct my_context *ctx = context;
+// 	char *name = ctx->name;
+// 	printf("Started coroutine %s\n", name);
+// 	printf("%s: switch count %lld\n", name, coro_switch_count(this));
+// 	printf("%s: yield\n", name);
+// 	coro_yield();
 
-	printf("%s: switch count %lld\n", name, coro_switch_count(this));
-	printf("%s: yield\n", name);
-	coro_yield();
+// 	printf("%s: switch count %lld\n", name, coro_switch_count(this));
+// 	printf("%s: yield\n", name);
+// 	coro_yield();
 
-	printf("%s: switch count %lld\n", name, coro_switch_count(this));
-	other_function(name, 1);
-	printf("%s: switch count after other function %lld\n", name,
-	       coro_switch_count(this));
+// 	printf("%s: switch count %lld\n", name, coro_switch_count(this));
+// 	other_function(name, 1);
+// 	printf("%s: switch count after other function %lld\n", name,
+// 	       coro_switch_count(this));
 
-	my_context_delete(ctx);
-	/* This will be returned from coro_status(). */
-	return 0;
-}
+// 	my_context_delete(ctx);
+// 	/* This will be returned from coro_status(). */
+// 	return 0;
+// }
 
 // Utils
 
@@ -315,6 +321,7 @@ merge_sort(int* arr, int l, int r)
 		merge_sort(arr, m + 1, r);
 
 		merge_and_sort(arr, l, m, r);
+		coro_yield();
 	}
 }
 
@@ -325,9 +332,14 @@ merge_sort(int* arr, int l, int r)
  * and sorts in content, writes the result to the file, and do a 
  * sortedArray struct given as a parameter
  */
-static void
-sort_file (struct sortedArray* file_sort_res, char* file_name)
+static int
+sort_file (void *context)
 {
+	// struct coro *this = coro_this();
+	struct my_context *ctx = context;
+	char* file_name = ctx->file_name;
+	struct sortedArray* file_sort_res = ctx->file_sort_res;
+
 	long num_bytes = get_file_num_bytes(file_name);
 
 	char* file_string = (char*) calloc(num_bytes, sizeof(char));
@@ -352,9 +364,12 @@ sort_file (struct sortedArray* file_sort_res, char* file_name)
 
 	write_file(file_name, numbers, num_items);
 
-	// TODO: might be a problem here, also maybe not freeing numbers*
 	file_sort_res->arr = numbers;
 	file_sort_res->length = num_items;
+
+	my_context_delete(ctx);
+
+	return 0;
 }
 
 int
@@ -366,31 +381,31 @@ main(int argc, char **argv)
 	/* Initialize our coroutine global cooperative scheduler. */
 	coro_sched_init();
 	/* Start several coroutines. */
-	for (int i = 0; i < 3; ++i) {
-		/*
-		 * The coroutines can take any 'void *' interpretation of which
-		 * depends on what you want. Here as an example I give them
-		 * some names.
-		 */
-		char name[16];
-		sprintf(name, "coro_%d", i);
-		/*
-		 * I have to copy the name. Otherwise all the coroutines would
-		 * have the same name when they finally start.
-		 */
-		coro_new(coroutine_func_f, my_context_new(name));
-	}
-	/* Wait for all the coroutines to end. */
-	struct coro *c;
-	while ((c = coro_sched_wait()) != NULL) {
-		/*
-		 * Each 'wait' returns a finished coroutine with which you can
-		 * do anything you want. Like check its exit status, for
-		 * example. Don't forget to free the coroutine afterwards.
-		 */
-		printf("Finished %d\n", coro_status(c));
-		coro_delete(c);
-	}
+	// for (int i = 0; i < 3; ++i) {
+	// 	/*
+	// 	 * The coroutines can take any 'void *' interpretation of which
+	// 	 * depends on what you want. Here as an example I give them
+	// 	 * some names.
+	// 	 */
+	// 	char name[16];
+	// 	sprintf(name, "coro_%d", i);
+	// 	/*
+	// 	 * I have to copy the name. Otherwise all the coroutines would
+	// 	 * have the same name when they finally start.
+	// 	 */
+	// 	coro_new(coroutine_func_f, my_context_new(name));
+	// }
+	// /* Wait for all the coroutines to end. */
+	// struct coro *c;
+	// while ((c = coro_sched_wait()) != NULL) {
+	// 	/*
+	// 	 * Each 'wait' returns a finished coroutine with which you can
+	// 	 * do anything you want. Like check its exit status, for
+	// 	 * example. Don't forget to free the coroutine afterwards.
+	// 	 */
+	// 	printf("Finished %d\n", coro_status(c));
+	// 	coro_delete(c);
+	// }
 	/* All coroutines have finished. */
 
 	/* IMPLEMENT MERGING OF THE SORTED ARRAYS HERE. */
@@ -400,12 +415,26 @@ main(int argc, char **argv)
 	struct sortedArray* all_sorted = malloc(num_test_files * sizeof(*all_sorted));
 	long total_num_items = 0;
 
-	for (int i = 0; i < num_test_files; i ++)
-	{
+	for (int i = 0; i < num_test_files; ++i) {
+		char name[16];
+		sprintf(name, "coro_%d", i);
 		sprintf(file_name, "test%d.txt", i + 1);
-		sort_file(&all_sorted[i], file_name);
+		coro_new(sort_file, my_context_new(name, file_name, &all_sorted[i]));
 		total_num_items += all_sorted[i].length;
 	}
+
+	struct coro *c;
+	while ((c = coro_sched_wait()) != NULL) {
+		printf("Finished %d\n", coro_status(c));
+		coro_delete(c);
+	}
+	
+	// for (int i = 0; i < num_test_files; i ++)
+	// {
+	// 	sprintf(file_name, "test%d.txt", i + 1);
+	// 	sort_file(&all_sorted[i], file_name);
+	// 	total_num_items += all_sorted[i].length;
+	// }
 
 	struct sortedArray accumulator = {
 		malloc(total_num_items * sizeof(int)), 0
