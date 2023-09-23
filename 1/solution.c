@@ -1,3 +1,4 @@
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,20 +14,21 @@
 
 struct my_context {
 	char *name;
-	int thread_no;
 	char* file_name;
+	long quantum;
 	struct sortedArray* file_sort_res;
 	/** ADD HERE YOUR OWN MEMBERS, SUCH AS FILE NAME, WORK TIME, ... */
 };
 
 static struct my_context *
-my_context_new(const char *name, int thread_no, char* file_name, struct sortedArray* file_sort_res)
+my_context_new(const char *name, char* file_name, long* quantum, struct sortedArray* file_sort_res)
 {
 	struct my_context *ctx = malloc(sizeof(*ctx));
 	ctx -> name = strdup(name);
-	ctx -> thread_no = thread_no;
 	ctx -> file_name = strdup(file_name);
+	ctx -> quantum = *quantum;
 	ctx -> file_sort_res = file_sort_res;
+
 	return ctx;
 }
 
@@ -262,12 +264,12 @@ write_file(char* file_name, int* content, int content_length)
  * and their lengths as parameters
  * P.S: make sure first param has enough memory
  */
-static void
-append_array(int* arr_1, int length_1, int* arr_2, int length_2)
-{	
-	for (int i = 0; i < length_2; i ++)
-		arr_1[i + length_1] = arr_2[i];
-}
+// static void
+// append_array(int* arr_1, int length_1, int* arr_2, int length_2)
+// {	
+// 	for (int i = 0; i < length_2; i ++)
+// 		arr_1[i + length_1] = arr_2[i];
+// }
 
 // Merge sort
 void
@@ -313,17 +315,30 @@ merge_and_sort(int* arr, int l, int m, int r)
 }
 
 void
-merge_sort(int* arr, int l, int r)
-{
+merge_sort(int* arr, int l, int r, long* quantum)
+{	
+	struct timespec *start = malloc(sizeof(*start));
+	clock_gettime(CLOCK_MONOTONIC, start);
+	
 	if (l < r)
 	{
 		int m = l + (r - l) / 2;
 
-		merge_sort(arr, l, m);
-		merge_sort(arr, m + 1, r);
+		merge_sort(arr, l, m, quantum);
+		merge_sort(arr, m + 1, r, quantum);
 
 		merge_and_sort(arr, l, m, r);
-		coro_yield();
+
+		struct timespec *end = malloc(sizeof(*end));
+		clock_gettime(CLOCK_MONOTONIC, end);
+
+		long time_diff = end->tv_nsec - start->tv_nsec;
+
+		free(start);
+		free(end);
+
+		if (time_diff > *quantum)
+			coro_yield();
 	}
 }
 
@@ -337,13 +352,12 @@ merge_sort(int* arr, int l, int r)
 static int
 sort_file (void *context)
 {
-	// struct coro *this = coro_this();
+	struct coro *this = coro_this();
 	struct my_context *ctx = context;
 	char* name = ctx->name;
-	int thread_no = ctx->thread_no;
 	char* file_name = ctx->file_name;
+	long quantum = ctx ->quantum;
 	struct sortedArray* file_sort_res = ctx->file_sort_res;
-
 	long num_bytes = get_file_num_bytes(file_name);
 
 	char* file_string = (char*) calloc(num_bytes, sizeof(char));
@@ -362,24 +376,30 @@ sort_file (void *context)
 
 	printf("Hi from %s\n", name);
 
-	merge_sort(numbers, 0, num_items);
+	merge_sort(numbers, 0, num_items, &quantum);
 
 	write_file(file_name, numbers, num_items);
 
+	// TODO: FIX THIS
 	file_sort_res->arr = numbers;
 	file_sort_res->length = num_items;
 
+	printf("%s: switch count %lld\n", name, coro_switch_count(this));
+
+	// print_num_array(file_sort_res -> arr, 30);
+	// printf("%d\n", file_sort_res->length);
+
 	my_context_delete(ctx);
 
-	return thread_no;
+	return 0;
 }
 
 int
 main(int argc, char **argv)
 {
 	/* Delete these suppressions when start using the args. */
-	(void)argc;
-	(void)argv;
+	// (void)argc;
+	// (void)argv;
 	/* Initialize our coroutine global cooperative scheduler. */
 	coro_sched_init();
 	/* Start several coroutines. */
@@ -412,54 +432,75 @@ main(int argc, char **argv)
 
 	/* IMPLEMENT MERGING OF THE SORTED ARRAYS HERE. */
 
+	int latency = 0;
+
+	if (argc > 2)
+	{
+		printf("Error: Too many arguments were provided");
+		exit(1);
+	}
+	else if (argc == 2)
+	{
+		latency = atoi(argv[1]);
+	}
+	else {
+		printf("Error: No arguments were provided. Expected (Latency)");
+		exit(1);
+	}
+
 	int num_test_files = count_test_files();
 	char* file_name = malloc(100 * sizeof(char));
 	struct sortedArray* all_sorted = malloc(num_test_files * sizeof(*all_sorted));
 	long total_num_items = 0;
 
+	// This is in nanoseconds
+	long quantum = ((float)latency / num_test_files) * 1000;
+	
 	for (int i = 0; i < num_test_files; ++i) 
 	{
 		char name[16];
-		int thread_no = i + 1;
-		sprintf(name, "coro_%d", thread_no);
+		sprintf(name, "coro_%d", i);
 		sprintf(file_name, "test%d.txt", i + 1);
-		coro_new(sort_file, my_context_new(name, thread_no, file_name, &all_sorted[i]));
+		coro_new(sort_file, my_context_new(name, file_name, &quantum, &all_sorted[i]));
 
+		// print_num_array( all_sorted[i].arr, 30);
+		// printf("%d\n", all_sorted[i].length);
+		// TODO: VALUES HERE ARE EMPTY
 		total_num_items += all_sorted[i].length;
 	}
-
+	printf("%ld\n", total_num_items);
 	struct coro *c;
 	while ((c = coro_sched_wait()) != NULL) {
 		printf("Finished %d\n", coro_status(c));
 		coro_delete(c);
 	}
+	
+	// struct sortedArray accumulator = {
+	// 	malloc(total_num_items * sizeof(int)), 0
+	// };
 
-	struct sortedArray accumulator = {
-		malloc(total_num_items * sizeof(int)), 0
-	};
-
-	for (int i = 0; i < num_test_files; i ++)
-	{
+	// for (int i = 0; i < num_test_files; i ++)
+	// {
 		
-		append_array(accumulator.arr, accumulator.length, all_sorted[i].arr, all_sorted[i].length);
+	// 	append_array(accumulator.arr, accumulator.length, all_sorted[i].arr, all_sorted[i].length);
 
-		if (i)
-		{	int m = accumulator.length - 1;
-			int r = m + all_sorted[i].length;
-			merge_and_sort(accumulator.arr, 0, m, r);
-		}
+	// 	if (i)
+	// 	{	int m = accumulator.length - 1;
+	// 		int r = m + all_sorted[i].length;
+	// 		merge_and_sort(accumulator.arr, 0, m, r);
+	// 	}
 
-		accumulator.length = all_sorted[i].length;
-	}
+	// 	accumulator.length += all_sorted[i].length;
+	// }
 
-	write_file("sum.txt", accumulator.arr, accumulator.length);
+	// write_file("sum.txt", accumulator.arr, accumulator.length);
 
 	for (int i = 0; i < num_test_files; i ++)
 	{
 		free(all_sorted[i].arr);
 	}
 	free(all_sorted);
-	free(accumulator.arr);
+	// free(accumulator.arr);
 	free(file_name);
 
 	return 0;
