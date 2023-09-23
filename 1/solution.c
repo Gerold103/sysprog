@@ -356,11 +356,11 @@ sort_file (void *context)
 
 	free(file_string);
 
-	// print_numbers(numbers, &num_items);
+	printf("Hi from %d\n", *ctx->name);
 
 	merge_sort(numbers, 0, num_items);
 
-	// print_numbers(numbers, &num_items);
+	printf("Hi from %d\n", *ctx->name);
 
 	write_file(file_name, numbers, num_items);
 
@@ -418,6 +418,7 @@ main(int argc, char **argv)
 	for (int i = 0; i < num_test_files; ++i) {
 		char name[16];
 		sprintf(name, "coro_%d", i);
+		printf("%s\n", name);
 		sprintf(file_name, "test%d.txt", i + 1);
 		coro_new(sort_file, my_context_new(name, file_name, &all_sorted[i]));
 		total_num_items += all_sorted[i].length;
