@@ -13,16 +13,18 @@
 
 struct my_context {
 	char *name;
-	struct sortedArray* file_sort_res;
+	int thread_no;
 	char* file_name;
+	struct sortedArray* file_sort_res;
 	/** ADD HERE YOUR OWN MEMBERS, SUCH AS FILE NAME, WORK TIME, ... */
 };
 
 static struct my_context *
-my_context_new(const char *name, char* file_name, struct sortedArray* file_sort_res)
+my_context_new(const char *name, int thread_no, char* file_name, struct sortedArray* file_sort_res)
 {
 	struct my_context *ctx = malloc(sizeof(*ctx));
 	ctx -> name = strdup(name);
+	ctx -> thread_no = thread_no;
 	ctx -> file_name = strdup(file_name);
 	ctx -> file_sort_res = file_sort_res;
 	return ctx;
@@ -337,6 +339,8 @@ sort_file (void *context)
 {
 	// struct coro *this = coro_this();
 	struct my_context *ctx = context;
+	char* name = ctx->name;
+	int thread_no = ctx->thread_no;
 	char* file_name = ctx->file_name;
 	struct sortedArray* file_sort_res = ctx->file_sort_res;
 
@@ -356,11 +360,9 @@ sort_file (void *context)
 
 	free(file_string);
 
-	printf("Hi from %d\n", *ctx->name);
+	printf("Hi from %s\n", name);
 
 	merge_sort(numbers, 0, num_items);
-
-	printf("Hi from %d\n", *ctx->name);
 
 	write_file(file_name, numbers, num_items);
 
@@ -369,7 +371,7 @@ sort_file (void *context)
 
 	my_context_delete(ctx);
 
-	return 0;
+	return thread_no;
 }
 
 int
@@ -415,12 +417,14 @@ main(int argc, char **argv)
 	struct sortedArray* all_sorted = malloc(num_test_files * sizeof(*all_sorted));
 	long total_num_items = 0;
 
-	for (int i = 0; i < num_test_files; ++i) {
+	for (int i = 0; i < num_test_files; ++i) 
+	{
 		char name[16];
-		sprintf(name, "coro_%d", i);
-		printf("%s\n", name);
+		int thread_no = i + 1;
+		sprintf(name, "coro_%d", thread_no);
 		sprintf(file_name, "test%d.txt", i + 1);
-		coro_new(sort_file, my_context_new(name, file_name, &all_sorted[i]));
+		coro_new(sort_file, my_context_new(name, thread_no, file_name, &all_sorted[i]));
+
 		total_num_items += all_sorted[i].length;
 	}
 
@@ -429,13 +433,6 @@ main(int argc, char **argv)
 		printf("Finished %d\n", coro_status(c));
 		coro_delete(c);
 	}
-	
-	// for (int i = 0; i < num_test_files; i ++)
-	// {
-	// 	sprintf(file_name, "test%d.txt", i + 1);
-	// 	sort_file(&all_sorted[i], file_name);
-	// 	total_num_items += all_sorted[i].length;
-	// }
 
 	struct sortedArray accumulator = {
 		malloc(total_num_items * sizeof(int)), 0
