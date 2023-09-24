@@ -12,83 +12,7 @@
  * $> ./a.out
  */
 
-struct my_context
-{
-	char *name;
-	/** ADD HERE YOUR OWN MEMBERS, SUCH AS FILE NAME, WORK TIME, ... */
-};
-
-static struct my_context *
-my_context_new(const char *name)
-{
-	struct my_context *ctx = malloc(sizeof(*ctx));
-	ctx->name = strdup(name);
-	return ctx;
-}
-
-static void
-my_context_delete(struct my_context *ctx)
-{
-	free(ctx->name);
-	free(ctx);
-}
-
-/**
- * A function, called from inside of coroutines recursively. Just to demonstrate
- * the example. You can split your code into multiple functions, that usually
- * helps to keep the individual code blocks simple.
- */
-static void
-other_function(const char *name, int depth)
-{
-	printf("%s: entered function, depth = %d\n", name, depth);
-	coro_yield();
-	if (depth < 3)
-		other_function(name, depth + 1);
-}
-
-/**
- * Coroutine body. This code is executed by all the coroutines. Here you
- * implement your solution, sort each individual file.
- */
-static int
-coroutine_func_f(void *context)
-{
-	/* IMPLEMENT SORTING OF INDIVIDUAL FILES HERE. */
-
-	struct coro *this = coro_this();
-	struct my_context *ctx = context;
-	char *name = ctx->name;
-	printf("Started coroutine %s\n", name);
-	printf("%s: switch count %lld\n", name, coro_switch_count(this));
-	printf("%s: yield\n", name);
-	coro_yield();
-
-	printf("%s: switch count %lld\n", name, coro_switch_count(this));
-	printf("%s: yield\n", name);
-	coro_yield();
-
-	printf("%s: switch count %lld\n", name, coro_switch_count(this));
-	other_function(name, 1);
-	printf("%s: switch count after other function %lld\n", name,
-		   coro_switch_count(this));
-
-	my_context_delete(ctx);
-	/* This will be returned from coro_status(). */
-	return 0;
-}
-
-static void writeFile(char *filename, int *numbers, int size)
-{
-	FILE *fptr = fopen(filename, "w");
-	for (int i = 0; i < size; i++)
-	{
-		fprintf(fptr, "%d ", numbers[i]);
-	}
-	fclose(fptr);
-}
-
-static char *readFile(char *filename) // one alloc that is freed in main
+static char *readFile(char *filename)
 {
 	FILE *fptr = fopen(filename, "r");
 
@@ -104,232 +28,237 @@ static char *readFile(char *filename) // one alloc that is freed in main
 	return fileInput;
 }
 
-static int parseArraySize(char *str) // no allocs
+static int *parseNumbers(char *str)
 {
+	// get size of array
+	char *strCopy = malloc(sizeof(char) * strlen(str));
+	strcpy(strCopy, str);
 	int size = 0;
-	char *token = strtok(str, " ");
-	while (token != NULL)
+	char *token1 = strtok(strCopy, " ");
+	while (token1 != NULL)
 	{
-		token = strtok(NULL, " ");
+		token1 = strtok(NULL, " ");
 		size++;
 	}
 
-	return size;
-}
+	free(strCopy); // free char *strCopy
 
-static int *parseNumbers(char *str, int *arraySize) // one alloc that is freed in main
-{
-	int i = 0;
-	int *numbers = malloc(sizeof(int) * *arraySize);
-	char *token = strtok(str, " ");
-	while (token != NULL)
+	// parse numbers
+	int i = 1;
+	int *numbers = malloc(sizeof(int) * (size + 1));
+	numbers[0] = size;
+	char *token2 = strtok(str, " ");
+	while (token2 != NULL)
 	{
-		numbers[i] = atoi(token);
-		token = strtok(NULL, " ");
+		numbers[i] = atoi(token2);
+		token2 = strtok(NULL, " ");
 		i++;
 	}
 	return numbers;
 }
 
-static int *merge(int *first, int *second, int firstSize, int secondSize)
+static void writeFile(char *filename, int *numbers, int size)
 {
-	int *numbers = malloc(sizeof(int) * (firstSize + secondSize));
-	int i = 0, j = 0, k = 0;
-	while (i < firstSize || j < secondSize)
+	FILE *fptr = fopen(filename, "w");
+	for (int i = 0; i < size; i++)
 	{
-		if (j == secondSize || (i != firstSize && first[i] <= second[j]))
+		fprintf(fptr, "%d ", numbers[i]);
+	}
+	fclose(fptr);
+}
+
+static int *merge(int *a, int *b)
+{
+	int sizeA = a[0];
+	int sizeB = b[0];
+	int *merged = malloc(sizeof(int) * (sizeA + sizeB + 1));
+	merged[0] = sizeA + sizeB;
+	int i = 1;
+	int j = 1;
+	int k = 1;
+	while (i <= sizeA && j <= sizeB)
+	{
+		if (a[i] < b[j])
 		{
-			numbers[k] = first[i];
+			merged[k] = a[i];
 			i++;
 		}
 		else
 		{
-			numbers[k] = second[j];
+			merged[k] = b[j];
 			j++;
 		}
 		k++;
 	}
-	return numbers;
+	while (i <= sizeA)
+	{
+		merged[k] = a[i];
+		i++;
+		k++;
+	}
+	while (j <= sizeB)
+	{
+		merged[k] = b[j];
+		j++;
+		k++;
+	}
+	return merged;
 }
 
-static int *mergeSort(int numbers[], int left, int right)
+static int *mergeSort(int *numbers)
 {
-	if (left == right)
+	int size = numbers[0];
+	if (size == 1)
 	{
 		return numbers;
 	}
-	if (left < right)
+	else
 	{
-		int middle = left + (right - left) / 2;
-
-		int firstSize = middle - left + 1;
-		int secondSize = right - middle;
-		int *first = malloc(sizeof(int) * firstSize);
-		int *second = malloc(sizeof(int) * secondSize);
-		for (int i = 0; i < firstSize; i++)
-			first[i] = numbers[left + i];
-		for (int i = 0; i < secondSize; i++)
-			second[i] = numbers[middle + 1 + i];
-		int *sortedFirst = mergeSort(first, 0, firstSize - 1);
-		int *sortedSecond = mergeSort(second, 0, secondSize - 1);
-
-		free(first);
-		free(second);
-
-		int *sorted = merge(sortedFirst, sortedSecond, firstSize, secondSize);
-
-		if (firstSize > 1)
-			free(sortedFirst);
-		if (secondSize > 1)
-			free(sortedSecond);
-
+		int mid = size / 2;
+		int *left = malloc(sizeof(int) * (mid + 1));
+		int *right = malloc(sizeof(int) * (size - mid + 1));
+		left[0] = mid;
+		right[0] = size - mid;
+		for (int i = 1; i <= mid; i++)
+		{
+			left[i] = numbers[i];
+		}
+		for (int i = mid + 1; i <= size; i++)
+		{
+			right[i - mid] = numbers[i];
+		}
+		int *sortedLeft = mergeSort(left);
+		int *sortedRight = mergeSort(right);
+		int *sorted = merge(sortedLeft, sortedRight);
+		coro_yield();
+		free(left);
+		free(right);
+		if (mid > 1)
+			free(sortedLeft);
+		if (size - mid > 1)
+			free(sortedRight);
 		return sorted;
 	}
 	return NULL;
 }
 
-static int *mergeSortArray(int *numbers[], int sizes[], int left, int right)
+struct my_context
 {
-	if (left == right)
+	int id;
+	char *name;
+	int **sorted;
+};
+
+static struct my_context *
+my_context_new(const char *name, int id, int **sorted)
+{
+	struct my_context *ctx = malloc(sizeof(*ctx));
+	ctx->name = strdup(name);
+	ctx->sorted = sorted;
+	ctx->id = id;
+
+	return ctx;
+}
+
+static void
+my_context_delete(struct my_context *ctx)
+{
+	free(ctx->name);
+	free(ctx);
+}
+
+/**
+ * Coroutine body. This code is executed by all the coroutines. Here you
+ * implement your solution, sort each individual file.
+ */
+static int
+coroutine_func_f(void *context)
+{
+	// struct coro *this = coro_this();
+	struct my_context *ctx = context;
+	int **sorted = ctx->sorted;
+
+	char *input = readFile(ctx->name);
+
+	int *numbers = parseNumbers(input);
+
+	sorted[0] = mergeSort(numbers);
+
+	free(numbers);
+
+	free(input);
+
+	my_context_delete(ctx);
+	return 0;
+}
+
+static int *mergeSortArrays(int **arrays, int size)
+{
+	if (size == 1)
 	{
-		return numbers[left];
+		return arrays[0];
 	}
-
-	if (left < right)
+	else
 	{
-		int middle = left + (right - left) / 2;
-
-		int firstSize = middle - left + 1;
-		int secondSize = right - middle;
-
-		int *firstHalf[firstSize];
-		int *secondHalf[secondSize];
-		int firstHalfSizes[firstSize];
-		int secondHalfSizes[secondSize];
-
-		for (int i = 0; i < firstSize; i++)
+		int mid = size / 2;
+		int **left = malloc(sizeof(int *) * mid);
+		int **right = malloc(sizeof(int *) * (size - mid));
+		for (int i = 0; i < mid; i++)
 		{
-			// firstHalf[i] = (int *)malloc(sizeof(int) * sizes[left + i]);
-			firstHalf[i] = numbers[left + i];
-			firstHalfSizes[i] = sizes[left + i];
+			left[i] = arrays[i];
 		}
-		for (int i = 0; i < secondSize; i++)
+		for (int i = mid; i < size; i++)
 		{
-			// secondHalf[i] = (int *)malloc(sizeof(int) * sizes[middle + 1 + i]);
-			secondHalf[i] = numbers[middle + 1 + i];
-			secondHalfSizes[i] = sizes[middle + 1 + i];
+			right[i - mid] = arrays[i];
 		}
-		int *sortedFirst = mergeSortArray(firstHalf, firstHalfSizes, 0, firstSize - 1);
-		int *sortedSecond = mergeSortArray(secondHalf, secondHalfSizes, 0, secondSize - 1);
-
-		// for (int i = 0; i < firstSize; i++)
-		// {
-		// 	if (firstHalfSizes[i] > 1)
-		// 		free(firstHalf[i]);
-		// }
-		// for (int i = 0; i < secondSize; i++)
-		// {
-		// 	if (secondHalfSizes[i] > 1)
-		// 		free(secondHalf[i]);
-		// }
-
-		int sz1 = 0, sz2 = 0;
-		for (int i = 0; i < firstSize; i++)
-		{
-			sz1 += firstHalfSizes[i];
-		}
-		for (int i = 0; i < secondSize; i++)
-		{
-			sz2 += secondHalfSizes[i];
-		}
-
-		int *sorted = merge(sortedFirst, sortedSecond, sz1, sz2);
-
-		if (firstSize > 1)
-			free(sortedFirst);
-		if (secondSize > 1)
-			free(sortedSecond);
-
+		int *sortedLeft = mergeSortArrays(left, mid);
+		int *sortedRight = mergeSortArrays(right, size - mid);
+		int *sorted = merge(sortedLeft, sortedRight);
+		free(left);
+		free(right);
+		if (mid > 1)
+			free(sortedLeft);
+		if (size - mid > 1)
+			free(sortedRight);
 		return sorted;
 	}
-
-	return NULL; // Handle an invalid case
+	return NULL;
 }
 
 int main(int argc, char **argv)
 {
-	int *sortedNumbers[argc];
-	int sizes[argc];
-	int size = 0;
+	int *sortedFiles[argc];
+	coro_sched_init();
+
 	for (int i = 1; i < argc; i++)
 	{
-		char *input = readFile(argv[i]);
-
-		char *inputCopy = malloc(sizeof(char) * strlen(input));
-		strcpy(inputCopy, input);
-
-		int arraySize = parseArraySize(inputCopy);
-		sizes[i - 1] = arraySize;
-		size += arraySize;
-		printf("arraySize: %d\n", arraySize);
-
-		// sortedNumbers[i - 1] = (int *)malloc(arraySize * sizeof(int));
-
-		int *numbers = parseNumbers(input, &arraySize);
-
-		sortedNumbers[i - 1] = mergeSort(numbers, 0, arraySize - 1);
-		free(inputCopy);
-		free(input);
-		free(numbers);
+		char *filename = argv[i];
+		coro_new(coroutine_func_f, my_context_new(filename, i - 1, &sortedFiles[i - 1]));
 	}
 
-	int *sortedArray = mergeSortArray(sortedNumbers, sizes, 0, argc - 2);
-
-	writeFile("result.txt", sortedArray, size);
-	if (argc > 2)
-		free(sortedArray);
-
-	for (int i = 0; i < argc - 1; i++)
-	{
-		free(sortedNumbers[i]);
-	}
-
-	/* Delete these suppressions when start using the args. */
-	(void)argc;
-	(void)argv;
-	/* Initialize our coroutine global cooperative scheduler. */
-	coro_sched_init();
-	/* Start several coroutines. */
-	for (int i = 0; i < 3; ++i)
-	{
-		/*
-		 * The coroutines can take any 'void *' interpretation of which
-		 * depends on what you want. Here as an example I give them
-		 * some names.
-		 */
-		char name[16];
-		sprintf(name, "coro_%d", i);
-		/*
-		 * I have to copy the name. Otherwise all the coroutines would
-		 * have the same name when they finally start.
-		 */
-		coro_new(coroutine_func_f, my_context_new(name));
-	}
 	/* Wait for all the coroutines to end. */
 	struct coro *c;
 	while ((c = coro_sched_wait()) != NULL)
 	{
-		/*
-		 * Each 'wait' returns a finished coroutine with which you can
-		 * do anything you want. Like check its exit status, for
-		 * example. Don't forget to free the coroutine afterwards.
-		 */
 		printf("Finished %d\n", coro_status(c));
 		coro_delete(c);
 	}
-	/* All coroutines have finished. */
 
-	/* IMPLEMENT MERGING OF THE SORTED ARRAYS HERE. */
+	int *sortedArr = mergeSortArrays(sortedFiles, argc - 1);
+	int *writeArr = malloc(sizeof(int) * (sortedArr[0]));
+	for (int i = 0; i < sortedArr[0]; i++)
+	{
+		writeArr[i] = sortedArr[i + 1];
+	}
+	writeFile("result.txt", writeArr, sortedArr[0]);
+
+	if (argc > 2)
+		free(sortedArr);
+	free(writeArr);
+	for (int i = 1; i < argc; i++)
+	{
+		free(sortedFiles[i - 1]);
+	}
 
 	return 0;
 }
