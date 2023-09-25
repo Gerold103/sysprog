@@ -346,12 +346,12 @@ merge_sort(int* arr, int l, int r, long* quantum, struct timespec *start, long *
 
 		long time_diff_nsec = get_time_diff_nsec(end, start);
 
-		*time_taken += time_diff_nsec;
 
 		free(end);
 
 		if (time_diff_nsec > *quantum)
 		{
+			*time_taken += time_diff_nsec;
 			coro_yield();
 			clock_gettime(CLOCK_MONOTONIC, start);
 		}
@@ -368,6 +368,10 @@ merge_sort(int* arr, int l, int r, long* quantum, struct timespec *start, long *
 static int
 sort_file (void *context)
 {
+	struct timespec *start = malloc(sizeof(*start));
+	long time_taken_nsec = 0;
+	clock_gettime(CLOCK_MONOTONIC, start);
+
 	struct coro *this = coro_this();
 	struct my_context *ctx = context;
 	char* name = ctx->name;
@@ -379,10 +383,8 @@ sort_file (void *context)
 	char* file_string = (char*) calloc(num_bytes, sizeof(char));
 
 	read_file(file_string, file_name, num_bytes);
-	// printf("%s\n", file_string);
 
 	int num_items = get_string_num_count(file_string);
-	// printf("%d\n", num_items);
 
 	int* numbers = (int*) malloc(num_items * sizeof(int));
 
@@ -390,11 +392,7 @@ sort_file (void *context)
 
 	free(file_string);
 
-	printf("Hi from %s\n", name);
-
-	struct timespec *start = malloc(sizeof(*start));
-	long time_taken_nsec = 0;
-	clock_gettime(CLOCK_MONOTONIC, start);
+	printf("%s: starting\n", name);
 
 	merge_sort(numbers, 0, num_items, &quantum, start, &time_taken_nsec);
 
@@ -403,8 +401,11 @@ sort_file (void *context)
 	file_sort_res->arr = numbers;
 	file_sort_res->length = num_items;
 
+	struct timespec *end = malloc(sizeof(*end));
+	clock_gettime(CLOCK_MONOTONIC, end);
+	time_taken_nsec += get_time_diff_nsec(end, start);
+
 	printf("%s: switch count %lld\n", name, coro_switch_count(this));
-	// This is in seconds
 	printf("%s: total working time (in seconds) %lf\n",name, time_taken_nsec / 1e9);
 
 	free(start);
