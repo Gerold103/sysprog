@@ -14,20 +14,24 @@
 
 struct my_context {
 	char *name;
-	char* file_name;
 	long quantum;
-	struct sortedArray* file_sort_res;
+	struct sortedArray* all_sorted;
+	int* num_remaining_files;
+	int total_num_files;
+	int index;
 	/** ADD HERE YOUR OWN MEMBERS, SUCH AS FILE NAME, WORK TIME, ... */
 };
 
 static struct my_context *
-my_context_new(const char *name, char* file_name, long* quantum, struct sortedArray* file_sort_res)
+my_context_new(const char *name, int index, long* quantum, struct sortedArray* all_sorted, int* num_remaining_files, int total_num_files)
 {
 	struct my_context *ctx = malloc(sizeof(*ctx));
 	ctx -> name = strdup(name);
-	ctx -> file_name = strdup(file_name);
 	ctx -> quantum = *quantum;
-	ctx -> file_sort_res = file_sort_res;
+	ctx -> all_sorted = all_sorted;
+	ctx ->  num_remaining_files = num_remaining_files;
+	ctx -> total_num_files = total_num_files;
+	ctx -> index = index;
 
 	return ctx;
 }
@@ -36,7 +40,6 @@ static void
 my_context_delete(struct my_context *ctx)
 {
 	free(ctx->name);
-	free(ctx->file_name);
 	free(ctx);
 }
 
@@ -94,6 +97,7 @@ my_context_delete(struct my_context *ctx)
 struct sortedArray {
 	int* arr;
 	int length;
+	bool sorted;
 };
 
 /**
@@ -365,19 +369,12 @@ merge_sort(int* arr, int l, int r, long* quantum, struct timespec *start, long *
  * and sorts in content, writes the result to the file, and do a 
  * sortedArray struct given as a parameter
  */
-static int
-sort_file (void *context)
+static void
+sort_file (char* file_name, long quantum, struct sortedArray* file_sort_res, long* time_taken_nsec)
 {
 	struct timespec *start = malloc(sizeof(*start));
-	long time_taken_nsec = 0;
 	clock_gettime(CLOCK_MONOTONIC, start);
 
-	struct coro *this = coro_this();
-	struct my_context *ctx = context;
-	char* name = ctx->name;
-	char* file_name = ctx->file_name;
-	long quantum = ctx ->quantum;
-	struct sortedArray* file_sort_res = ctx->file_sort_res;
 	long num_bytes = get_file_num_bytes(file_name);
 
 	char* file_string = (char*) calloc(num_bytes, sizeof(char));
@@ -392,9 +389,7 @@ sort_file (void *context)
 
 	free(file_string);
 
-	printf("%s: starting\n", name);
-
-	merge_sort(numbers, 0, num_items, &quantum, start, &time_taken_nsec);
+	merge_sort(numbers, 0, num_items, &quantum, start, time_taken_nsec);
 
 	write_file(file_name, numbers, num_items);
 
@@ -403,13 +398,49 @@ sort_file (void *context)
 
 	struct timespec *end = malloc(sizeof(*end));
 	clock_gettime(CLOCK_MONOTONIC, end);
-	time_taken_nsec += get_time_diff_nsec(end, start);
+	*time_taken_nsec += get_time_diff_nsec(end, start);
+
+	free(start);
+	free(end);
+}
+
+int
+coroutine_func(void *context)
+{
+	struct coro *this = coro_this();
+	struct my_context *ctx = context;
+	char* name = ctx->name;
+	long quantum = ctx ->quantum;
+	struct sortedArray* all_sorted = ctx->all_sorted;
+	int total_num_files = ctx->total_num_files;
+	int* num_remaining_files = ctx->num_remaining_files;
+	long time_taken_nsec = 0;
+	char* file_name = malloc(100 * sizeof(char));
+
+	printf("%s: starting\n", name);
+
+	while(true){
+		for (int i = 0; i < total_num_files; i++)
+		{
+			if (!all_sorted[i].sorted)
+			{
+				all_sorted[i].sorted = true;
+				(*num_remaining_files)--;
+				sprintf(file_name, "test%d.txt", i + 1);
+				printf("%s: working on file %s\n", name, file_name);
+				sort_file(file_name, quantum, &all_sorted[i], &time_taken_nsec);
+			}
+		}
+
+		if(*num_remaining_files <=0) 
+			break;	
+	}
 
 	printf("%s: switch count %lld\n", name, coro_switch_count(this));
 	printf("%s: total working time (in seconds) %lf\n",name, time_taken_nsec / 1e9);
 
-	free(start);
 	my_context_delete(ctx);
+	free(file_name);
 	return 0;
 }
 
@@ -454,35 +485,36 @@ main(int argc, char **argv)
 	/* IMPLEMENT MERGING OF THE SORTED ARRAYS HERE. */
 
 	int latency = 0;
+	int num_coroutines = 0;
 
-	if (argc > 2)
+	if (argc > 3)
 	{
 		printf("Error: Too many arguments were provided");
 		exit(1);
 	}
-	else if (argc == 2)
+	else if (argc == 3)
 	{
 		latency = atoi(argv[1]);
+		num_coroutines = atoi(argv[2]);
 	}
 	else {
-		printf("Error: No arguments were provided. Expected (Latency)");
+		printf("Error: Insufficient arguments were provided. Expected (Latency, No. coroutines)");
 		exit(1);
 	}
 
 	int num_test_files = count_test_files();
-	char* file_name = malloc(100 * sizeof(char));
+	int remaining_files = num_test_files;
 	struct sortedArray* all_sorted = malloc(num_test_files * sizeof(*all_sorted));
 	long total_num_items = 0;
 
 	// This is in nanoseconds
 	long quantum = ((float)latency / num_test_files) * 1e3;
 	
-	for (int i = 0; i < num_test_files; ++i) 
+	for (int i = 0; i < num_coroutines; ++i) 
 	{
 		char name[16];
 		sprintf(name, "coro_%d", i);
-		sprintf(file_name, "test%d.txt", i + 1);
-		coro_new(sort_file, my_context_new(name, file_name, &quantum, &all_sorted[i]));
+		coro_new(coroutine_func, my_context_new(name, i,&quantum, all_sorted, &remaining_files, num_test_files));
 	}
 
 	struct coro *c;
@@ -497,7 +529,7 @@ main(int argc, char **argv)
 	}
 
 	struct sortedArray accumulator = {
-		malloc(total_num_items * sizeof(int)), 0
+		malloc(total_num_items * sizeof(int)), 0, 0
 	};
 
 	for (int i = 0; i < num_test_files; i ++)
@@ -527,7 +559,6 @@ main(int argc, char **argv)
 	}
 	free(all_sorted);
 	free(accumulator.arr);
-	free(file_name);
 	free(start_time);
 	free(end_time);
 
