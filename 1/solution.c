@@ -35,7 +35,6 @@ my_context_new(const char *name, char* file_name, long* quantum, struct sortedAr
 static void
 my_context_delete(struct my_context *ctx)
 {
-	// TODO: Possiblity a problem here with the last prop not being freed
 	free(ctx->name);
 	free(ctx->file_name);
 	free(ctx);
@@ -264,12 +263,27 @@ write_file(char* file_name, int* content, int content_length)
  * and their lengths as parameters
  * P.S: make sure first param has enough memory
  */
-// static void
-// append_array(int* arr_1, int length_1, int* arr_2, int length_2)
-// {	
-// 	for (int i = 0; i < length_2; i ++)
-// 		arr_1[i + length_1] = arr_2[i];
-// }
+static void
+append_array(int* arr_1, int length_1, int* arr_2, int length_2)
+{	
+	for (int i = 0; i < length_2; i ++)
+		arr_1[i + length_1] = arr_2[i];
+}
+
+/**
+ A function returns the difference in nanoseconds between
+ * two timespec structs
+ */
+static long
+get_time_diff_nsec(struct timespec *end, struct timespec *start)
+{
+	long diff = 0;
+
+	diff += (end->tv_sec - start->tv_sec) * 1e9;
+	diff += end->tv_nsec - start->tv_nsec;
+
+	return diff;
+}
 
 // Merge sort
 void
@@ -315,30 +329,32 @@ merge_and_sort(int* arr, int l, int m, int r)
 }
 
 void
-merge_sort(int* arr, int l, int r, long* quantum)
+merge_sort(int* arr, int l, int r, long* quantum, struct timespec *start, long *time_taken)
 {	
-	struct timespec *start = malloc(sizeof(*start));
-	clock_gettime(CLOCK_MONOTONIC, start);
-	
+
 	if (l < r)
 	{
 		int m = l + (r - l) / 2;
 
-		merge_sort(arr, l, m, quantum);
-		merge_sort(arr, m + 1, r, quantum);
+		merge_sort(arr, l, m, quantum, start, time_taken);
+		merge_sort(arr, m + 1, r, quantum, start, time_taken);
 
 		merge_and_sort(arr, l, m, r);
 
 		struct timespec *end = malloc(sizeof(*end));
 		clock_gettime(CLOCK_MONOTONIC, end);
 
-		long time_diff = end->tv_nsec - start->tv_nsec;
+		long time_diff_nsec = get_time_diff_nsec(end, start);
 
-		free(start);
+		*time_taken += time_diff_nsec;
+
 		free(end);
 
-		if (time_diff > *quantum)
+		if (time_diff_nsec > *quantum)
+		{
 			coro_yield();
+			clock_gettime(CLOCK_MONOTONIC, start);
+		}
 	}
 }
 
@@ -376,27 +392,31 @@ sort_file (void *context)
 
 	printf("Hi from %s\n", name);
 
-	merge_sort(numbers, 0, num_items, &quantum);
+	struct timespec *start = malloc(sizeof(*start));
+	long time_taken_nsec = 0;
+	clock_gettime(CLOCK_MONOTONIC, start);
+
+	merge_sort(numbers, 0, num_items, &quantum, start, &time_taken_nsec);
 
 	write_file(file_name, numbers, num_items);
 
-	// TODO: FIX THIS
 	file_sort_res->arr = numbers;
 	file_sort_res->length = num_items;
 
 	printf("%s: switch count %lld\n", name, coro_switch_count(this));
+	// This is in seconds
+	printf("%s: total working time (in seconds) %lf\n",name, time_taken_nsec / 1e9);
 
-	// print_num_array(file_sort_res -> arr, 30);
-	// printf("%d\n", file_sort_res->length);
-
+	free(start);
 	my_context_delete(ctx);
-
 	return 0;
 }
 
 int
 main(int argc, char **argv)
 {
+	struct timespec *start_time = malloc(sizeof(*start_time));
+	clock_gettime(CLOCK_MONOTONIC, start_time);
 	/* Delete these suppressions when start using the args. */
 	// (void)argc;
 	// (void)argv;
@@ -454,7 +474,7 @@ main(int argc, char **argv)
 	long total_num_items = 0;
 
 	// This is in nanoseconds
-	long quantum = ((float)latency / num_test_files) * 1000;
+	long quantum = ((float)latency / num_test_files) * 1e3;
 	
 	for (int i = 0; i < num_test_files; ++i) 
 	{
@@ -462,46 +482,53 @@ main(int argc, char **argv)
 		sprintf(name, "coro_%d", i);
 		sprintf(file_name, "test%d.txt", i + 1);
 		coro_new(sort_file, my_context_new(name, file_name, &quantum, &all_sorted[i]));
-
-		// print_num_array( all_sorted[i].arr, 30);
-		// printf("%d\n", all_sorted[i].length);
-		// TODO: VALUES HERE ARE EMPTY
-		total_num_items += all_sorted[i].length;
 	}
-	printf("%ld\n", total_num_items);
+
 	struct coro *c;
 	while ((c = coro_sched_wait()) != NULL) {
 		printf("Finished %d\n", coro_status(c));
 		coro_delete(c);
 	}
 	
-	// struct sortedArray accumulator = {
-	// 	malloc(total_num_items * sizeof(int)), 0
-	// };
+	for (int i = 0; i < num_test_files; ++i) 
+	{
+		total_num_items += all_sorted[i].length;
+	}
 
-	// for (int i = 0; i < num_test_files; i ++)
-	// {
+	struct sortedArray accumulator = {
+		malloc(total_num_items * sizeof(int)), 0
+	};
+
+	for (int i = 0; i < num_test_files; i ++)
+	{
 		
-	// 	append_array(accumulator.arr, accumulator.length, all_sorted[i].arr, all_sorted[i].length);
+		append_array(accumulator.arr, accumulator.length, all_sorted[i].arr, all_sorted[i].length);
 
-	// 	if (i)
-	// 	{	int m = accumulator.length - 1;
-	// 		int r = m + all_sorted[i].length;
-	// 		merge_and_sort(accumulator.arr, 0, m, r);
-	// 	}
+		if (i)
+		{	int m = accumulator.length - 1;
+			int r = m + all_sorted[i].length;
+			merge_and_sort(accumulator.arr, 0, m, r);
+		}
 
-	// 	accumulator.length += all_sorted[i].length;
-	// }
+		accumulator.length += all_sorted[i].length;
+	}
 
-	// write_file("sum.txt", accumulator.arr, accumulator.length);
+	write_file("sum.txt", accumulator.arr, accumulator.length);
+
+	struct timespec *end_time = malloc(sizeof(*end_time));
+	clock_gettime(CLOCK_MONOTONIC, end_time);
+
+	printf("Total program working time (in seconds) %lf\n", get_time_diff_nsec(end_time, start_time) / 1e9);
 
 	for (int i = 0; i < num_test_files; i ++)
 	{
 		free(all_sorted[i].arr);
 	}
 	free(all_sorted);
-	// free(accumulator.arr);
+	free(accumulator.arr);
 	free(file_name);
+	free(start_time);
+	free(end_time);
 
 	return 0;
 }
