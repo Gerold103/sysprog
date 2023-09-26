@@ -5,13 +5,6 @@
 #include <dirent.h>
 #include "libcoro.h"
 
-/**
- * You can compile and run this code using the commands:
- *
- * $> gcc solution.c libcoro.c
- * $> ./a.out
- */
-
 struct my_context {
 	char *name;
 	long quantum;
@@ -19,7 +12,6 @@ struct my_context {
 	int* num_remaining_files;
 	int total_num_files;
 	int index;
-	/** ADD HERE YOUR OWN MEMBERS, SUCH AS FILE NAME, WORK TIME, ... */
 };
 
 static struct my_context *
@@ -42,51 +34,6 @@ my_context_delete(struct my_context *ctx)
 	free(ctx->name);
 	free(ctx);
 }
-
-/**
- * A function, called from inside of coroutines recursively. Just to demonstrate
- * the example. You can split your code into multiple functions, that usually
- * helps to keep the individual code blocks simple.
- */
-// static void
-// other_function(const char *name, int depth)
-// {
-// 	printf("%s: entered function, depth = %d\n", name, depth);
-// 	coro_yield();
-// 	if (depth < 3)
-// 		other_function(name, depth + 1);
-// }
-
-/**
- * Coroutine body. This code is executed by all the coroutines. Here you
- * implement your solution, sort each individual file.
- */
-// static int
-// coroutine_func_f(void *context)
-// {
-// 	/* IMPLEMENT SORTING OF INDIVIDUAL FILES HERE. */
-
-// 	struct coro *this = coro_this();
-// 	struct my_context *ctx = context;
-// 	char *name = ctx->name;
-// 	printf("Started coroutine %s\n", name);
-// 	printf("%s: switch count %lld\n", name, coro_switch_count(this));
-// 	printf("%s: yield\n", name);
-// 	coro_yield();
-
-// 	printf("%s: switch count %lld\n", name, coro_switch_count(this));
-// 	printf("%s: yield\n", name);
-// 	coro_yield();
-
-// 	printf("%s: switch count %lld\n", name, coro_switch_count(this));
-// 	other_function(name, 1);
-// 	printf("%s: switch count after other function %lld\n", name,
-// 	       coro_switch_count(this));
-
-// 	my_context_delete(ctx);
-// 	/* This will be returned from coro_status(). */
-// 	return 0;
-// }
 
 // Utils
 
@@ -250,8 +197,6 @@ write_file(char* file_name, int* content, int content_length)
 		exit(1);
 	}
 
-	// printf("%d\n%s\n", content_length, file_name);
-
 	for(int i = 0; i < content_length; i++)
 	{
 		fprintf(fp, "%d ", content[i]);
@@ -263,7 +208,7 @@ write_file(char* file_name, int* content, int content_length)
 }
 
 /**
- A function that appends one array to another given the arrays
+ * A function that appends one array to another given the arrays
  * and their lengths as parameters
  * P.S: make sure first param has enough memory
  */
@@ -275,7 +220,7 @@ append_array(int* arr_1, int length_1, int* arr_2, int length_2)
 }
 
 /**
- A function returns the difference in nanoseconds between
+ * A function that returns the difference in nanoseconds between
  * two timespec structs
  */
 static long
@@ -289,7 +234,9 @@ get_time_diff_nsec(struct timespec *end, struct timespec *start)
 	return diff;
 }
 
-// Merge sort
+/**
+ * The merge part of merge sort
+ */
 void
 merge_and_sort(int* arr, int l, int m, int r)
 {
@@ -332,6 +279,9 @@ merge_and_sort(int* arr, int l, int m, int r)
 	}
 }
 
+/**
+ * Merge sort + time measurements
+ */
 void
 merge_sort(int* arr, int l, int r, long* quantum, struct timespec *start, long *time_taken)
 {	
@@ -365,9 +315,9 @@ merge_sort(int* arr, int l, int r, long* quantum, struct timespec *start, long *
 // Sorting a single file
 
 /**
- * A function that takes a file name as a parameter, opens the file 
- * and sorts in content, writes the result to the file, and do a 
- * sortedArray struct given as a parameter
+ * A function that takes a file name quantum, and a time accumulator
+ * opens the file and sorts its content writes 
+ * the result back to the file, and to a sortedArray struct given as a parameter
  */
 static void
 sort_file (char* file_name, long quantum, struct sortedArray* file_sort_res, long* time_taken_nsec)
@@ -395,7 +345,9 @@ sort_file (char* file_name, long quantum, struct sortedArray* file_sort_res, lon
 
 	file_sort_res->arr = numbers;
 	file_sort_res->length = num_items;
-
+	
+	// Adding the last bit of time taken in 
+	//case coroutine didn't yield after its last iteration
 	struct timespec *end = malloc(sizeof(*end));
 	clock_gettime(CLOCK_MONOTONIC, end);
 	*time_taken_nsec += get_time_diff_nsec(end, start);
@@ -404,6 +356,9 @@ sort_file (char* file_name, long quantum, struct sortedArray* file_sort_res, lon
 	free(end);
 }
 
+/**
+ * A single coroutine function implementing a coroutine pool
+ */
 int
 coroutine_func(void *context)
 {
@@ -449,41 +404,9 @@ main(int argc, char **argv)
 {
 	struct timespec *start_time = malloc(sizeof(*start_time));
 	clock_gettime(CLOCK_MONOTONIC, start_time);
-	/* Delete these suppressions when start using the args. */
-	// (void)argc;
-	// (void)argv;
-	/* Initialize our coroutine global cooperative scheduler. */
 	coro_sched_init();
-	/* Start several coroutines. */
-	// for (int i = 0; i < 3; ++i) {
-	// 	/*
-	// 	 * The coroutines can take any 'void *' interpretation of which
-	// 	 * depends on what you want. Here as an example I give them
-	// 	 * some names.
-	// 	 */
-	// 	char name[16];
-	// 	sprintf(name, "coro_%d", i);
-	// 	/*
-	// 	 * I have to copy the name. Otherwise all the coroutines would
-	// 	 * have the same name when they finally start.
-	// 	 */
-	// 	coro_new(coroutine_func_f, my_context_new(name));
-	// }
-	// /* Wait for all the coroutines to end. */
-	// struct coro *c;
-	// while ((c = coro_sched_wait()) != NULL) {
-	// 	/*
-	// 	 * Each 'wait' returns a finished coroutine with which you can
-	// 	 * do anything you want. Like check its exit status, for
-	// 	 * example. Don't forget to free the coroutine afterwards.
-	// 	 */
-	// 	printf("Finished %d\n", coro_status(c));
-	// 	coro_delete(c);
-	// }
-	/* All coroutines have finished. */
 
-	/* IMPLEMENT MERGING OF THE SORTED ARRAYS HERE. */
-
+	// Parse args
 	int latency = 0;
 	int num_coroutines = 0;
 
@@ -507,9 +430,10 @@ main(int argc, char **argv)
 	struct sortedArray* all_sorted = malloc(num_test_files * sizeof(*all_sorted));
 	long total_num_items = 0;
 
-	// This is in nanoseconds
+	// Covnert to nanoseconds
 	long quantum = ((float)latency / num_test_files) * 1e3;
 	
+	// Start coroutines
 	for (int i = 0; i < num_coroutines; ++i) 
 	{
 		char name[16];
@@ -517,12 +441,14 @@ main(int argc, char **argv)
 		coro_new(coroutine_func, my_context_new(name, i,&quantum, all_sorted, &remaining_files, num_test_files));
 	}
 
+	// End coroutines
 	struct coro *c;
 	while ((c = coro_sched_wait()) != NULL) {
 		printf("Finished %d\n", coro_status(c));
 		coro_delete(c);
 	}
 	
+	// Accumulate sort results 
 	for (int i = 0; i < num_test_files; ++i) 
 	{
 		total_num_items += all_sorted[i].length;
@@ -532,6 +458,7 @@ main(int argc, char **argv)
 		malloc(total_num_items * sizeof(int)), 0, 0
 	};
 
+	// Merge sort results
 	for (int i = 0; i < num_test_files; i ++)
 	{
 		
@@ -546,8 +473,10 @@ main(int argc, char **argv)
 		accumulator.length += all_sorted[i].length;
 	}
 
+	// Write results to file
 	write_file("sum.txt", accumulator.arr, accumulator.length);
 
+	// Calculate total time and free memory
 	struct timespec *end_time = malloc(sizeof(*end_time));
 	clock_gettime(CLOCK_MONOTONIC, end_time);
 

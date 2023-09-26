@@ -18,6 +18,9 @@ relaxed: libcoro.c solution.c
 	./generator_generator.sh 6
 	gcc $(RELAXED_FLAGS) libcoro.c solution.c
 
+test:
+	./checker_checker.sh
+
 clean:
 	rm -f a.out
 	find  . -name 'test*' -exec rm {} \;
