@@ -24,6 +24,9 @@ Rules:
   sometimes, screwing the time measurements. clock() is monotonic,
   but doesn't account time spent in blocking syscalls.
 
+- The code should be built successfully with these compiler flags:
+  `-Wextra -Werror -Wall -Wno-gnu-folding-constant`.
+
 
 Restrictions:
 
