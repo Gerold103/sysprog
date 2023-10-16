@@ -202,6 +202,8 @@ parse_token(const char *pos, const char *end, struct token *out)
 		case '&':
 		case '|':
 		case '>':
+			if (quote != 0)
+				goto append_and_next;
 			if (out->size > 0) {
 				out->type = TOKEN_TYPE_STR;
 				return pos - begin;

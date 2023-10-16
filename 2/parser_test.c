@@ -125,7 +125,7 @@ test_escape_in_string(void)
 	struct command_line *line = NULL;
 
 	/* echo '123 456 \" str \"' */
-	const char *str = "echo '123 456 \\\" str \\\"'";
+	const char *str = "echo '123 >&| 456 \\\" str \\\"'";
 	uint32_t len = strlen(str);
 	for (uint32_t i = 0; i < len; ++i) {
 		parser_feed(p, &str[i], 1);
@@ -139,7 +139,7 @@ test_escape_in_string(void)
 	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
 	unit_check(e->cmd.arg_count == 1, "arg count");
 	unit_check(strcmp(e->cmd.args[0],
-		"123 456 \\\" str \\\"") == 0, "arg[0]");
+		"123 >&| 456 \\\" str \\\"") == 0, "arg[0]");
 	unit_check(e->next == NULL, "no more exprs");
 	command_line_delete(line);
 
