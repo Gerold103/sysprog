@@ -243,5 +243,31 @@ if is_error:
 	      '`a` repeated {} times'.format(count))
 	exit_failure()
 
+# Test an extra long pipe. To ensure that the shell doesn't have a limit on the
+# command count inside one line.
+p = open_new_shell()
+count = 1000
+output_expected = 'test'
+command = 'echo ' + output_expected + ' | cat' * count + '\n'
+output_expected += '\n'
+try:
+	output = p.communicate(command.encode(), 5)[0].decode()
+except subprocess.TimeoutExpired:
+	print('Too long no output on an extra long pipe')
+	is_error = True
+p.terminate()
+if not is_error and output != output_expected:
+	print('Bad output for a command with an extra long pipe')
+	is_error = True
+if not is_error and p.returncode != 0:
+	print('Bad return code for a command with an extra long pipe - '\
+	      'expected 0 (success)')
+	is_error = True
+if is_error:
+	print('Failed a command with an extra long pipe '\
+	      '(`echo test | cat | cat | cat ... | cat` with '\
+	      '`cat` repeated {} times'.format(count))
+	exit_failure()
+
 print('{}\nThe tests passed'.format(prefix))
 finish(0)
