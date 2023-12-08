@@ -142,7 +142,7 @@ client_pop_next_blocking(struct chat_client *c, struct chat_server *s)
 static bool
 author_is_eq(const struct chat_message *msg, const char *name)
 {
-#if NEED_AUTHOR
+#ifdef NEED_AUTHOR
 	return strcmp(msg->author, name) == 0;
 #else
 	(void)msg;
