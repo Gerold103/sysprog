@@ -19,6 +19,7 @@ tests = [
 "cd testdir",
 'pwd | tail -c 8',
 '   pwd | tail -c 8',
+'echo \"a\n\n\n\nb\" | cat -s',
 ],
 [
 "touch \"my file with whitespaces in name.txt\"",

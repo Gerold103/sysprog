@@ -5,6 +5,10 @@ $> Test 3
 testdir
 $> Test 4
 testdir
+$> Test 5
+a
+
+b
 --------------------------------Section 2
 $> Test 1
 $> Test 2

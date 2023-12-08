@@ -9,6 +9,15 @@ $> pwd
 $>   pwd
 .../testdir
 
+$> echo "a
+
+
+
+b" | cat -s
+a
+
+b
+
 ----------------------------------------------------------------02
 $> touch "my file with whitespaces in name.txt"
 
