@@ -339,20 +339,22 @@ trace_is_internal(const struct symbol *syms, int count)
 	return false;
 }
 
-static void
+static int
 trace_resolve(void *const *addrs, int count, struct symbol *syms)
 {
+	int failures = 0;
 	Dl_info info;
 	for (int i = 0; i < count; ++i) {
 		struct symbol *s = &syms[i];
 		if (dladdr(addrs[i], &info) == 0) {
-			heaph_printf("\nHH: dladdr() failure\n");
+			failures++;
 			memset(s, 0, sizeof(*s));
 			continue;
 		}
 		s->name = info.dli_sname;
 		s->file = info.dli_fname;
 	}
+	return failures;
 }
 
 static void
@@ -381,6 +383,7 @@ heaph_atexit(void)
 	int report_count = 0;
 	int64_t total_count = count;
 	uint64_t leak_size = 0;
+	int64_t total_fail_count = 0;
 	struct symbol syms[MAX_BACKTRACE_LEN];
 	// People often do not write '\n' in the end of their program. That
 	// makes it harder to read HH output unless the latter prepends itself
@@ -392,7 +395,7 @@ heaph_atexit(void)
 			--count;
 			continue;
 		}
-		trace_resolve(a->trace, a->trace_size, syms);
+		total_fail_count += trace_resolve(a->trace, a->trace_size, syms);
 		bool is_internal = trace_is_internal(syms, a->trace_size);
 		if (is_internal) {
 			--count;
@@ -407,6 +410,11 @@ heaph_atexit(void)
 			leak_size += a->size;
 	}
 	spinlock_rel(&allocs_lock);
+
+	if (total_fail_count > 0) {
+		heaph_printf("\nHH: dladdr() failure %lld times\n",
+		             (long long)total_fail_count);
+	}
 
 	if (count == 0 && report_mode != MODE_VERBOSE)
 		return;
