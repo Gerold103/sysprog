@@ -545,6 +545,42 @@ test_stress(void)
 	unit_test_finish();
 }
 
+static void
+test_big_author(void)
+{
+#ifdef NEED_AUTHOR
+	unit_test_start();
+
+	uint64_t author_len = 10 * 1024 * 1024;
+	char *author = malloc(author_len + 1);
+	memset(author, 'z', author_len);
+	author[author_len] = 0;
+
+	struct chat_server *s = chat_server_new();
+	unit_fail_if(chat_server_listen(s, 0) != 0);
+	uint16_t port = server_get_port(s);
+	struct chat_client *c1 = chat_client_new(author);
+	unit_fail_if(chat_client_connect(c1, make_addr_str(port)) != 0);
+
+	uint64_t body_len = 20 * 1024 * 1024;
+	char *body = malloc(body_len + 1);
+	memset(body, 'm', body_len);
+	body[body_len] = '\n';
+
+	unit_check(chat_client_feed(c1, body, body_len + 1) == 0, "feed to client");
+	struct chat_message *msg = server_pop_next_blocking_from(s, c1);
+	unit_check(msg != NULL, "server got msg");
+	body[body_len] = 0;
+	unit_check(strcmp(msg->data, body) == 0, "msg data");
+	unit_check(author_is_eq(msg, author), "msg author");
+	chat_message_delete(msg);
+
+	free(body);
+	free(author);
+	unit_test_finish();
+#endif
+}
+
 int
 main(void)
 {
@@ -555,6 +591,7 @@ main(void)
 	test_multi_feed();
 	test_multi_client();
 	test_stress();
+	test_big_author();
 
 	unit_test_finish();
 	return 0;
