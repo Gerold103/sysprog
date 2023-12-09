@@ -1,0 +1,9 @@
+## Rules of the exam
+
+- You get 3 random questions from the list.
+- We talk one on one.
+- Each question gives you between 0 and 5 points. Max total is 15.
+- The exam is passed with 8 points or more.
+- Cheating nullifies the question on which it happens.
+- I can ask about arbitrary follow-up details for each question.
+- If after the exam your total point count for the whole course is still less than minimal, but the exam was passed, then your course mark is lifted to the minimal passing value.
