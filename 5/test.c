@@ -551,16 +551,23 @@ test_big_author(void)
 #ifdef NEED_AUTHOR
 	unit_test_start();
 
-	uint64_t author_len = 10 * 1024 * 1024;
-	char *author = malloc(author_len + 1);
-	memset(author, 'z', author_len);
-	author[author_len] = 0;
+	uint64_t author1_len = 10 * 1024 * 1024;
+	char *author1 = malloc(author1_len + 1);
+	memset(author1, 'z', author1_len);
+	author1[author1_len] = 0;
+
+	uint64_t author2_len = 11 * 1024 * 1024;
+	char *author2 = malloc(author2_len + 1);
+	memset(author2, 'y', author2_len);
+	author2[author2_len] = 0;
 
 	struct chat_server *s = chat_server_new();
 	unit_fail_if(chat_server_listen(s, 0) != 0);
 	uint16_t port = server_get_port(s);
-	struct chat_client *c1 = chat_client_new(author);
+	struct chat_client *c1 = chat_client_new(author1);
 	unit_fail_if(chat_client_connect(c1, make_addr_str(port)) != 0);
+	struct chat_client *c2 = chat_client_new(author2);
+	unit_fail_if(chat_client_connect(c2, make_addr_str(port)) != 0);
 
 	uint64_t body_len = 20 * 1024 * 1024;
 	char *body = malloc(body_len + 1);
@@ -572,11 +579,22 @@ test_big_author(void)
 	unit_check(msg != NULL, "server got msg");
 	body[body_len] = 0;
 	unit_check(strcmp(msg->data, body) == 0, "msg data");
-	unit_check(author_is_eq(msg, author), "msg author");
+	unit_check(author_is_eq(msg, author1), "msg author");
+	chat_message_delete(msg);
+
+	msg = client_pop_next_blocking(c2, s);
+	unit_check(msg != NULL, "other client got msg");
+	unit_check(strcmp(msg->data, body) == 0, "msg data");
+	unit_check(author_is_eq(msg, author1), "msg author");
 	chat_message_delete(msg);
 
 	free(body);
-	free(author);
+	free(author1);
+	free(author2);
+	chat_client_delete(c1);
+	chat_client_delete(c2);
+	chat_server_delete(s);
+
 	unit_test_finish();
 #endif
 }
