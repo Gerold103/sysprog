@@ -106,14 +106,38 @@ some number of times. To see how much time one create+join costs
 approximately, PER ONE PAIR of create+join. Do it in a loop 100k
 times.
 
-## (5) Atomic increment
+## (5) Atomic operations
 Points: 3.
-Atomic increment in N threads. You need to start N threads
-(customizable number), each is constantly doing atomic lock-free
-increment on a certain variable. See how fast the increments are
-depending on thread count and memory order. Use the time PER 1000
-INCREMENTS as the target statistic. Try at least
+Atomic store and increment in N threads. You need to start N
+threads (customizable number), each is doing an atomic store into
+a value V and increments the global counter C until the counter
+reaches the needed limit. See how fast the stores are depending on
+thread count and memory order used for the stores. Use the time
+PER 1000 ITERATIONS as the target statistic.
+
+Your worker thread body should look something like that:
+```
+void *worker_f(void *arg)
+{
+    volatile uint64_t random_on_stack;
+    while (__atomic_add_fetch(&global_counter, 1,
+        __ATOMIC_RELAXED) < TARGET)
+    {
+        __atomic_store_n(&value, random_on_stack, BENCH_MEM_ORDER);
+    }
+}
+```
+
+The volatile random value on stack ensures that the loop won't be
+optimized out. It is important to have the store in the test, not
+just the increment. Otherwise on x86 you won't see a difference
+between the memory orders. Note, that the increment must be always
+relaxed, the configurable order is only for the store.
+
+Try at least
 * 100 mln increments with 1 thread and relaxed order;
+* 100 mln increments with 1 thread and sequentially consistent
+  order;
 * 100 mln increments with 3 threads and relaxed order;
 * 100 mln increments with 3 threads and sequentially consistent
   order.
