@@ -14,16 +14,48 @@ tasks might be duplicated.
 
 Each benchmark is basically calling some function or functions in
 a loop many thousands or even millions of times. You have to
-save a timestamp before and after the loop, find the duration, and
-print it. To reduce the amount of noise you need to run the
-benchmark multiple times and use min, max and median durations as
-the result.
+save a timestamp before and after the loop and find the duration.
+To reduce the amount of noise you need to run the benchmark
+multiple times and use min, max and median durations as the
+result.
 
 For bench parameters you can either try to do it via the command
 line arguments or just as const global variables in the code.
 
 For time measurement you have to use
 clock_gettime(CLOCK_MONOTONIC).
+
+Example of your code:
+```
+    array times;
+    for (int run_i = 0; i < 5; ++i) {
+        uint64_t start_ts = clock_gettime(CLOCK_MONOTONIC);
+        for (uint64_t i = 0; i < iteration_count; ++i) {
+            <tested operation>
+        }
+        uint64_t duration = clock_gettime(CLOCK_MONOTONIC) - start_ts;
+        double time_per_operation = duration / iteration_count;
+        times.append(time_per_operation);
+    }
+    print("min: ", times.min());
+    print("med: ", times.median());
+    print("max: ", times.max());
+```
+
+The proposed output for each bench could be this:
+```
+<Scenario 1>
+    min: ...
+    max: ...
+    med: ...
+<Scenario 2>
+    min: ...
+    max: ...
+    med: ...
+<...>
+```
+
+For each task you need to attach the results from your machine in a text file.
 
 ## (1) Clock bench
 Points: 3.
@@ -50,14 +82,18 @@ measure the time to transfer the total size. Try at least
 * 15 GB in 512 B packs.
 
 Keep in mind that send() might send less data than it was given.
+Measure the speed in MB PER SECOND as the target statistic.
 
 ## (3) Pthread mutex lock
 Points: 4.
 pthread_mutex_lock/unlock in N threads. You need to start N
 threads (customizable number), each is constantly doing mutex
-lock/unlock. For each lock you need to increment a global atomic
-counter. See how much time it takes to do certain amount of
+lock/unlock. For each lock you need to increment a global counter.
+See how much time it takes to do certain total amount of
 locks/unlocks depending on thread count, PER ONE LOCK/UNLOCK pair.
+Total means that all the threads together should do that number of
+locks/unlocks, not each of them individually.
+
 Try at least
 * 10 mln locks with 1 thread;
 * 10 mln locks with 2 threads;
@@ -67,16 +103,16 @@ Try at least
 Points: 2.
 You need to create and join a dummy thread with an empty function
 some number of times. To see how much time one create+join costs
-approximately, PER ONE PAIR. Do it in a loop 100k times, measure
-the time per one create+join.
+approximately, PER ONE PAIR of create+join. Do it in a loop 100k
+times.
 
 ## (5) Atomic increment
 Points: 3.
 Atomic increment in N threads. You need to start N threads
 (customizable number), each is constantly doing atomic lock-free
-increment on a certain variable. See how much time it takes to
-reach certain value on that variable depending on thread count and
-memory order. Try at least
+increment on a certain variable. See how fast the increments are
+depending on thread count and memory order. Use the time PER 1000
+INCREMENTS as the target statistic. Try at least
 * 100 mln increments with 1 thread and relaxed order;
 * 100 mln increments with 3 threads and relaxed order;
 * 100 mln increments with 3 threads and sequentially consistent
@@ -88,10 +124,18 @@ Need to measure cost of signal vs broadcast depending on thread
 count. You need to start 1 thread doing the signaling and N
 threads doing pthread_cond_wait(). The condvar needs to be
 protected with a mutex. You need to measure how much time it takes
-to make certain number of signaling calls. The signaling thread
-need to either call pthread_cond_signal() or
-pthread_cond_broadcast(). Depending on bench params. Try at least
-these combinations:
+to make certain number of the signaling calls. The signaling
+thread needs to either call pthread_cond_signal() or
+pthread_cond_broadcast(). Depending on bench params.
+
+Note that on each iteration you need to lock the mutex, do the
+signaling, and then unlock the mutex. Holding the mutex during the
+entire loop won't make sense because the waiters won't be able to
+wakeup then.
+
+Your target metric is time PER ONE SIGNALING CALL.
+
+Try at least these combinations:
 * 1 mln signal()s with 1 wait-thread;
 * 1 mln broadcast()s with 1 wait-thread;
 * 1 mln signal()s with 3 wait-threads;
@@ -105,8 +149,9 @@ uint64_t numbers. And then start N threads. Each thread should
 increment its own number in the array in a loop.
 
 Make sure the compiler won't turn the loop into a single +=
-operation. For that you can try to add a check on a dummy volatile
-variable in the loop's condition.
+operation. For that you can try to make the loop iterator variable
+volatile. Then the compiler most likely won't inline or drop the
+loop.
 
 Assuming the threads are in an array, thread with index A should
 use number arr[A]. See how much time it takes for all the threads
@@ -114,8 +159,14 @@ to reach certain value of their numbers.
 
 Then make the threads use numbers on a distance from each other.
 So thread with index A uses number arr[A * 8]. Distance between
-numbers should be at least 64 bytes. Repeat the bench. You need to
-try at least the following combinations:
+numbers should be at least 64 bytes. Repeat the bench.
+
+Your target metric here is time PER 1000 INCREMENTS. Keep in mind
+that each thread must increment its number to the given value. It
+is not total.
+
+You need to try at least the following combinations:
+
 * 100 mln increments with 1 thread;
 * 100 mln increments with 2 threads with close numbers;
 * 100 mln increments with 2 threads with distant numbers;
