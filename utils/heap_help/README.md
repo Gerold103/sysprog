@@ -27,3 +27,12 @@ There are modes which allow to get more or less info:
 * `HHREPORT=v ./my_app` - v = "verbose", either the leaks are printed like with
   the mode "l", or is printed a message saying that "there are no leaks". The
   mode helps to check if the heap help is working at all.
+
+The tool also can help to detect usage of invalid memory. For that it can fill
+the newly allocated memory to increase the chances to get a crash and fine the
+buggy place.
+
+* `HHCONTENT=o ./my_app` - o = "original", memory is returned raw as is.
+
+* `HHCONTENT=t ./my_app` - t = "trash", new memory will be filled with some
+  trash bytes.
