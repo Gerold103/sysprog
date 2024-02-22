@@ -1,0 +1,116 @@
+------------------------------------------------------------------
+Game lobby chat.
+Language: C++.
+Deadline: n/a.
+------------------------------------------------------------------
+
+Need to implement a game lobby chat. It consists of a chat server
+and a client.
+
+The clients connect to the server and each message is broadcasted
+to all the clients via this server. So the server is like a game
+lobby. Everyone reads all messages from all the others and the
+messages are not persisted anyhow.
+
+In the attached .h and .cpp files you can find templates of
+functions, classes, and structures which need to be implemented.
+
+A usage example of the exe files is that you start a server,
+start one or more clients, and everything sent by anybody is
+displayed in all clients. Like so:
+
+$> ./server             $> ./client             $> ./client
+I am client-1!          I am client-1!          I am client-1!
+I am client-2!          I am client-2!          I am client-2!
+
+
+Rules:
+
+- Message end is `\n` (line wrap). Note, that '\n' is not a part
+  of the message. It is just a delimiter. I.e. if feed('msg\n') is
+  called, then the peers should return 'msg' from recv(). Note
+  also that feed() can get multiple messages or even their parts:
+  - feed('msg1\nmsg2\n') - recv() returns 'msg1' and 'msg2';
+  - feed('msg1\nms') - recv() returns 'msg1'. 'ms' remains
+    buffered until meets the next '\n'.
+
+- Own messages are not sent back to the client.
+
+- Empty messages (consisting of just spaces - see isspace()
+  function) are not sent at all.
+
+- Each message is trimmed from any spaces at both left and right
+  sides. For example, if I type "  m s   g   " in a terminal and
+  press enter, the message to be sent should be "m s   g".
+
+
+Restrictions:
+
+- Global variables are not allowed (except for the already
+  existing ones).
+
+- Memory leaks are not allowed.
+
+- Mutexes are not allowed anywhere except for test.cpp. You have
+  to use strands to make sure there is no concurrent access to any
+  data.
+
+- You should not use sleep()/usleep() or any similar function
+  anywhere except for tests. All waiting for anything has to be
+  done using async boost functions and methods.
+
+- No busy-loops of any sort anywhere.
+
+- Be ready that send/write and other output functions can send
+  just a part of data. For example, send(100) can return 60. Keep
+  that in mind when handle results of async_send() and whatever
+  else you are using.
+
+- The API in the headers can not be changed (unless you spot a
+  mistake there - then tell me).
+
+- The attached makefile should keep working and compilation should
+  have zero warnings/errors. Alternatively you can try to use
+  cmake, but then need to keep all the same compiler options.
+
+
+Relaxations:
+
+- Can assume message queues are always small enough to fit into
+  the memory.
+
+- Can assume all input and output buffers always fit into the
+  memory.
+
+- Can use abort() for critical errors like when accept() fails.
+
+- You can store output buffer in any format. For example, copy
+  each message passed to feed() and store those in a list. Or copy
+  every message into a single big buffer to the end.
+
+- Client count is never too big. Peer-sockets and memory for their
+  resources are always enough on the server.
+
+- You can assume the client and server operate only on IPv4
+  addresses.
+
+- You can try to reuse some code between chat_client_peer and
+  chat_server_peer. For example, introduce a new interface
+  chat_peer which is able to send/recv messages and the received
+  ones it passes to a virtual function that you overload in the
+  client and server peer classes.
+
+
+Advices:
+
+- Briefly read the solution templates to get the idea what is
+  needed overall.
+
+- Decide on your protocol how will you send and receive messages.
+  It means you need to design how the messages in the socket's
+  byte stream would be separated from each other. Zero-byte after
+  each or send a header with the message size before the message
+  itself - doesn't matter much, but you need to choose one way.
+
+- You might want to start with the client. It is easier than the
+  server.
