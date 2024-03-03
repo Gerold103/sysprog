@@ -78,6 +78,8 @@ tests = [
 "sleep 0.5 && echo 'back sleep is done' &",
 "echo 'next sleep is done'",
 "sleep 0.5",
+"sleep 0.1 && exit 1 &",
+"echo 100",
 ]
 ]
 

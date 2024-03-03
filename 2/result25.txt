@@ -91,3 +91,6 @@ $> Test 2
 next sleep is done
 $> Test 3
 back sleep is done
+$> Test 4
+$> Test 5
+100

@@ -160,3 +160,7 @@ next sleep is done
 
 $> sleep 0.5
 back sleep is done
+
+$> sleep 0.1 && exit 1 &
+
+$> echo 100
