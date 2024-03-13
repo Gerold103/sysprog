@@ -245,6 +245,11 @@ Client::connectAndRun(
 	makeFdNonblock(sock);
 	myTask = core.subscribe(sock);
 
+	// Lambda capture won't work with a coroutine. The coro also captures things but only
+	// the arguments. It can't capture the lambda's captures alongside. This leads to the
+	// weird crutch when the to-capture values have to be passed as parameters. Otherwise
+	// the coroutine body would reference lambda's captures which would be deleted when
+	// the lambda object is destroyed, and that would lead to use-after-free.
 	[](Client* self, uint16_t port) -> IOCoroutine {
 		LOG_OBJ_DEBUG(Client, self, coroConnectAndRun, "");
 		sockaddr_in addr;
@@ -254,6 +259,8 @@ Client::connectAndRun(
 		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 		int rc = co_await self->myTask->asyncConnect((sockaddr *)&addr, sizeof(addr));
 		assert(rc == 0);
+		// Unfortunately, can't reuse the current coroutine for running the main loop.
+		// Have to create a new one.
 		self->coroRun();
 		co_return;
 	}(this, port);
