@@ -207,6 +207,30 @@ test_io(void)
 	for (size_t i = 0; i < some_size && ok; ++i)
 		ok = ok && buffer[i] == (char)('a' + i % ('z' - 'a' + 1));
 	unit_check(ok, "data is correct");
+	/*
+	 * Make sure on overwrite the blocks are not lost or anything.
+	 */
+	some_size = 1500;
+	assert(sizeof(buffer) > some_size);
+	const int offset = 5;
+	for (size_t i = 0; i < some_size; ++i)
+		buffer[i] = 'a' + i % ('z' - 'a' + 1 + offset);
+	fd1 = ufs_open("file", 0);
+	unit_fail_if(fd1 == -1);
+	rc = ufs_write(fd1, buffer, some_size);
+	unit_check((ssize_t)some_size == rc, "rewrite all new");
+	ufs_close(fd1);
+
+	fd1 = ufs_open("file", 0);
+	unit_fail_if(fd1 == -1);
+	rc = ufs_read(fd1, buffer, sizeof(buffer));
+	unit_check(rc == (ssize_t)some_size, "read the exact data size");
+	for (size_t i = 0; i < some_size && ok; ++i) {
+		ok = ok && buffer[i] ==
+			(char)('a' + i % ('z' - 'a' + 1 + offset));
+	}
+	unit_check(ok, "data is correct");
+	ufs_close(fd1);
 
 	ufs_delete("file");
 
@@ -287,6 +311,10 @@ test_max_file_size(void)
 	unit_check(ufs_write(fd, "a", 1) == -1,
 		   "can not write over max file size");
 	unit_check(ufs_errno() == UFS_ERR_NO_MEM, "errno is set");
+	int fd1 = ufs_open("file", 0);
+	unit_check(ufs_write(fd1, buf, 1) == 1,
+		   "write inside the file using another descriptor");
+	ufs_close(fd1);
 
 	unit_fail_if(ufs_close(fd) != 0);
 	fd = ufs_open("file", 0);
