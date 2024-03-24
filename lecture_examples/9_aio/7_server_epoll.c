@@ -14,16 +14,22 @@
 #include <sys/epoll.h>
 #include <sys/time.h>
 
+struct peer {
+	int fd;
+	struct peer *next;
+	struct peer *prev;
+};
+
 int
-interact(int client_sock)
+interact(struct peer *p)
 {
 	int buffer = 0;
-	ssize_t size = recv(client_sock, &buffer, sizeof(buffer), 0);
+	ssize_t size = recv(p->fd, &buffer, sizeof(buffer), 0);
 	if (size <= 0)
 		return (int) size;
 	printf("Received %d\n", buffer);
 	buffer++;
-	size = send(client_sock, &buffer, sizeof(buffer), 0);
+	size = send(p->fd, &buffer, sizeof(buffer), 0);
 	if (size > 0)
 		printf("Sent %d\n", buffer);
 	return (int) size;
@@ -57,13 +63,14 @@ main(int argc, const char **argv)
 		return -1;
 	}
 	struct epoll_event new_ev;
-	new_ev.data.fd = server;
+	new_ev.data.ptr = NULL;
 	new_ev.events = EPOLLIN;
 	if (epoll_ctl(ep, EPOLL_CTL_ADD, server, &new_ev) == -1) {
 		printf("error = %s\n", strerror(errno));
 		close(server);
 		return -1;
 	}
+	struct peer *peers = NULL;
 	while(1) {
 		int nfds = epoll_wait(ep, &new_ev, 1, 2000);
 		if (nfds == 0) {
@@ -74,34 +81,58 @@ main(int argc, const char **argv)
 			printf("error = %s\n", strerror(errno));
 			break;
 		}
-		if (new_ev.data.fd == server) {
-			int client_sock = accept(server, NULL, NULL);
-			if (client_sock == -1) {
+		if (new_ev.data.ptr == NULL) {
+			int peer_sock = accept(server, NULL, NULL);
+			if (peer_sock == -1) {
 				printf("error = %s\n", strerror(errno));
 				break;
 			}
 			printf("New client\n");
-			new_ev.data.fd = client_sock;
+			struct peer *p = malloc(sizeof(*p));
+			new_ev.data.ptr = p;
 			new_ev.events = EPOLLIN;
-			if (epoll_ctl(ep, EPOLL_CTL_ADD, client_sock,
+			if (epoll_ctl(ep, EPOLL_CTL_ADD, peer_sock,
 				      &new_ev) == -1) {
 				printf("error = %s\n", strerror(errno));
+				free(p);
 				break;
 			}
-		} else {
-			printf("Interact with fd %d\n", (int)new_ev.data.fd);
-			int rc = interact(new_ev.data.fd);
-			if (rc == -1) {
-				printf("error = %s\n", strerror(errno));
-				if (errno != EWOULDBLOCK && errno != EAGAIN)
-					break;
-			} else if (rc == 0) {
-				printf("Client disconnected\n");
-				epoll_ctl(ep, EPOLL_CTL_DEL, new_ev.data.fd,
-					  NULL);
-				close(new_ev.data.fd);
-			}
+			p->fd = peer_sock;
+			p->next = peers;
+			p->prev = NULL;
+			if (peers != NULL)
+				peers->prev = p;
+			peers = p;
+			continue;
 		}
+		struct peer *p = new_ev.data.ptr;
+		printf("Interact with fd %d\n", (int)p->fd);
+		int rc = interact(p);
+		if (rc == -1) {
+			printf("error = %s\n", strerror(errno));
+			if (errno != EWOULDBLOCK && errno != EAGAIN)
+				break;
+			continue;
+		}
+		if (rc != 0)
+			continue;
+
+		printf("Client disconnected\n");
+		epoll_ctl(ep, EPOLL_CTL_DEL, p->fd, NULL);
+		if (p->prev != NULL)
+			p->prev->next = p->next;
+		if (p->next != NULL)
+			p->next->prev = p->prev;
+		if (p == peers)
+			peers = p->next;
+		close(p->fd);
+		free(p);
+	}
+	while (peers != NULL) {
+		struct peer *next = peers->next;
+		close(peers->fd);
+		free(peers);
+		peers = next;
 	}
 	close(ep);
 	close(server);
