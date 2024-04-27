@@ -87,6 +87,17 @@ test_push(void)
 	unit_check(thread_pool_thread_count(p) == 1, "still one active thread");
 	unit_check(thread_task_delete(t) == 0, "deleted after join");
 	/*
+	 * Work starts after push, it isn't blocked on join.
+	 */
+	arg = 0;
+	unit_check(thread_task_new(&t, task_incr_f, &arg) == 0,
+		   "created new task");
+	unit_check(thread_pool_push_task(p, t) == 0, "push");
+	while (__atomic_load_n(&arg, __ATOMIC_RELAXED) != 1)
+		usleep(100);
+	unit_check(thread_task_join(t, &result) == 0, "joined");
+	unit_check(thread_task_delete(t) == 0, "deleted after join");
+	/*
 	 * Re-push stress.
 	 */
 	const int count = 1000;
