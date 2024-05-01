@@ -73,9 +73,10 @@ Restrictions:
 - You can use libev if you feel it will be easier than direct
   usage of epoll/kqueue (but honestly it is unlikely).
 
-- In epoll you have to use epoll_event.data and in kqueue -
-  kevent.udata. For matching events to their sockets after return
-  from epoll_wait() and kevent().
+- In epoll you have to use epoll_event.data.ptr and in kqueue -
+  kevent.udata. Note, usage of epoll_event.data.fd is not allowed.
+  The ptr/udata must be used for matching events to their sockets
+  after return from epoll_wait() and kevent().
 
 - The attached makefile should keep working and compilation should
   have zero warnings/errors. Alternatively you can try to use
