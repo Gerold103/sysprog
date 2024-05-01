@@ -1,176 +1,146 @@
-import subprocess
 import argparse
-import sys
 import os
+import pathlib
+import shutil
+import subprocess
+import sys
+import test_parser
+
+test_dir = './testdir'
+small_timeout = 3
+bonus_prefix_logic = 'bonus logical operators'
+bonus_prefix_backround = 'bonus background'
+bonus_prefix_all = 'bonus all'
+points = 15
 
 parser = argparse.ArgumentParser(description='Tests for shell')
 parser.add_argument('-e', type=str, default='./a.out',
-	            help='executable shell file')
-parser.add_argument('-r', type=str, help='result file')
-parser.add_argument('-t', action='store_true', default=False,
-		    help='run without checks')
-parser.add_argument('--max', type=int, choices=[15, 20, 25], default=15,
-		    help='max points number')
+                    help='executable shell file')
+parser.add_argument('--with_logic', type=bool, default=False,
+                    help='Enable boolean logic bonus')
+parser.add_argument('--with_background', type=bool, default=False,
+                    help='Enable background bonus')
+parser.add_argument('--many_args_count', type=int, default=100 * 1000,
+                    help='Number of arguments for the extra-many-args test')
+parser.add_argument('--tests', type=str, default='./tests.txt',
+                    help='File with tests')
+parser.add_argument('--verbose', type=bool, default=False,
+                    help='Print more info for all sorts of things')
 args = parser.parse_args()
 
-tests = [
-[
-"mkdir testdir",
-"cd testdir",
-'pwd | tail -c 8',
-'   pwd | tail -c 8',
-'echo \"a\n\n\n\nb\" | cat -s',
-],
-[
-"touch \"my file with whitespaces in name.txt\"",
-"ls",
-"echo '123 456 \" str \"'",
-"echo '123 456 \" str \"' > \"my file with whitespaces in name.txt\"",
-"cat my\\ file\\ with\\ whitespaces\\ in\\ name.txt",
-"echo \"test\" >> \"my file with whitespaces in name.txt\"",
-"cat \"my file with whitespaces in name.txt\"",
-"echo 'truncate' > \"my file with whitespaces in name.txt\"",
-"cat \"my file with whitespaces in name.txt\"",
-"echo \"test 'test'' \\\\\" >> \"my file with whitespaces in name.txt\"",
-"cat \"my file with whitespaces in name.txt\"",
-"echo \"4\">file",
-"cat file",
-"echo 100|grep 100",
-],
-[
-"# Comment",
-"echo 123\\\n456",
-],
-[
-"rm my\\ file\\ with\\ whitespaces\\ in\\ name.txt",
-"echo 123 | grep 2",
-"echo 123\\\n456\\\n| grep 2",
-"echo \"123\n456\n7\n\" | grep 4",
-"echo 'source string' | sed 's/source/destination/g'",
-"echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g'",
-"echo 'source string' |\\\nsed 's/source/destination/g'\\\n| sed 's/string/value/g'",
-"echo 'test' | exit 123 | grep 'test2'",
-"echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g' > result.txt",
-"cat result.txt",
-"yes bigdata | head -n 100000 | wc -l | tr -d [:blank:]",
-"exit 123 | echo 100",
-"echo 100 | exit 123",
-"printf \"import time\\n\\\n"\
-	"time.sleep(0.1)\\n\\\n"\
-	"f = open('test.txt', 'w')\\n\\\n"\
-	"f.write('Text\\\\\\n')\\n\\\n"\
-	"f.close()\\n\" > test.py",
-"python test.py | exit 0",
-"cat test.txt",
-],
-[
-"false && echo 123",
-"true && echo 123",
-"true || false && echo 123",
-"true || false || true && echo 123",
-"false || echo 123",
-"echo 100 || echo 200",
-"echo 100 && echo 200",
-"echo 100 | grep 1 || echo 200 | grep 2",
-"echo 100 | grep 1 && echo 200 | grep 2",
-],
-[
-"sleep 0.5 && echo 'back sleep is done' &",
-"echo 'next sleep is done'",
-"sleep 0.5",
-"sleep 0.1 && exit 1 &",
-"echo 100",
-]
-]
+if args.with_logic:
+    points += 5
+if args.with_background:
+    points += 5
 
-prefix = '--------------------------------'
-
-def finish(code):
-	os.system('rm -rf testdir')
-	sys.exit(code)
+exe_path = os.path.abspath(args.e)
+all_sections = test_parser.parse(args.tests)
+test_sections = []
+for section in all_sections:
+    if section.type.startswith(bonus_prefix_all) and \
+       (not args.with_logic or not args.with_background):
+        print('Skipped on all bonuses section {}'.format(section.name))
+        continue
+    if section.type.startswith(bonus_prefix_logic) and not args.with_logic:
+        print('Skipped on logic section {}'.format(section.name))
+        continue
+    if section.type.startswith(bonus_prefix_backround) and not args.with_background:
+        print('Skipped on background section {}'.format(section.name))
+        continue
+    test_sections.append(section)
 
 def open_new_shell():
-	return subprocess.Popen([args.e], shell=False, stdin=subprocess.PIPE,
-				stdout=subprocess.PIPE,
-				stderr=subprocess.STDOUT, bufsize=0)
+    return subprocess.Popen([exe_path], shell=False, stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, bufsize=0,
+                            cwd=test_dir)
 
-def exit_failure():
-	print('{}\nThe tests did not pass'.format(prefix))
-	finish(-1)
+def cleanup():
+    shutil.rmtree(test_dir, ignore_errors=True)
 
-command = ''
-for section_i, section in enumerate(tests, 1):
-	if section_i == 5 and args.max == 15:
-		break
-	if section_i == 6 and args.max != 25:
-		break
-	command += 'echo "{}Section {}"\n'.format(prefix, section_i)
-	for test_i, test in enumerate(section, 1):
-		command += 'echo "$> Test {}"\n'.format(test_i)
-		command += '{}\n'.format(test)
+def recreate_dir():
+    cleanup()
+    pathlib.Path(test_dir).mkdir(exist_ok=True)
 
+##########################################################################################
+print('⏳ Running tests in one shell')
+recreate_dir()
 p = open_new_shell()
+input_cmd = ''
+output_exp = ''
+for section in test_sections:
+    for case in section.cases:
+        input_cmd += case.body
+        output_exp += case.output
 try:
-	output = p.communicate(command.encode(), 3)[0].decode()
+    output_got = p.communicate(input_cmd.encode(), small_timeout)[0].decode()
 except subprocess.TimeoutExpired:
-	print('Too long no output. Probably you forgot to process EOF')
-	finish(-1)
+    print('Too long no output. Probably you forgot to process EOF')
+    sys.exit(-1)
 if p.returncode != 0:
-	print('Expected zero exit code')
-	finish(-1)
+    print('Expected zero exit code')
+    sys.exit(-1)
+if output_got != output_exp:
+    print('Tests output mismatch')
+    if args.verbose:
+            print('######## Expected:')
+            print(output_exp)
+            print('')
+            print('######## Got:')
+            print(output_got)
+    sys.exit(-1)
+print('✅ Passed')
 
-if args.t:
-	print(output)
-	finish(0)
+##########################################################################################
+print('⏳ Running tests one by one')
+recreate_dir()
+for section in test_sections:
+    for case in section.cases:
+        p = open_new_shell()
+        try:
+            output_got = p.communicate(case.body.encode(), small_timeout)[0].decode()
+        except subprocess.TimeoutExpired:
+            print('Too long no output for test {} on line {}. '\
+                  'Probably you forgot to process EOF'.format(case.name, case.line))
+            sys.exit(-1)
+        if output_got != case.output:
+            print('Test output mismatch for {} on line {}'.format(case.name, case.line))
+            if args.verbose:
+                print('######## Expected:')
+                print(case.output)
+                print('')
+                print('######## Got:')
+                print(output_got)
+            sys.exit(-1)
+print('✅ Passed')
 
-output = output.splitlines()
-result = args.r
-if not result:
-	result = 'result{}.txt'.format(args.max)
-with open(result) as f:
-	etalon = f.read().splitlines()
-etalon_len = len(etalon)
-output_len = len(output)
-line_count = min(etalon_len, output_len)
-is_error = False
-for i in range(line_count):
-	print(output[i])
-	if output[i] != etalon[i]:
-		print('Error in line {}. '\
-		      'Expected:\n{}'.format(i + 1, etalon[i]))
-		is_error = True
-		break
-if not is_error and etalon_len != output_len:
-	print('Different line count. Got {}, '\
-	      'expected {}'.format(output_len, etalon_len))
-	is_error = True
-p.terminate()
-if is_error:
-	exit_failure()
-
+##########################################################################################
 # Explicitly test the 'exit' command. It is expected to terminate the shell,
 # hence tested separately.
+print('⏳ Test \'exit\' command')
 tests = [
 ("exit", 0),
 ("  exit ", 0),
 ("  exit   10  ", 10),
 ]
 for test in tests:
-	p = open_new_shell()
-	try:
-		p.stdin.write(test[0].encode() + b'\n')
-		p.wait(1)
-	except subprocess.TimeoutExpired:
-		print('Too long no output. Probably you forgot to '\
-		      'handle "exit" manually')
-		finish(-1)
-	p.terminate()
-	if p.returncode != test[1]:
-		print('Wrong exit code in test "{}"'.format(test[0]))
-		print('Expected {}, got {}'.format(test[1], p.returncode))
-		exit_failure()
+    p = open_new_shell()
+    try:
+        p.stdin.write(test[0].encode() + b'\n')
+        p.wait(1)
+    except subprocess.TimeoutExpired:
+        print('Too long no output. Probably you forgot to handle "exit" manually')
+        sys.exit(-1)
+    p.terminate()
+    if p.returncode != test[1]:
+        print('Wrong exit code in test "{}"'.format(test[0]))
+        print('Expected {}, got {}'.format(test[1], p.returncode))
+        sys.exit(-1)
+print('✅ Passed')
 
+##########################################################################################
 # Exit code should be from the last used command.
+print('⏳ Test exit code after certain commands')
 tests = [
 (["ls /"], 0),
 (["ls / | exit 123"], 123),
@@ -182,95 +152,105 @@ assert(code != 0)
 tests.append(([cmd], code))
 
 for test in tests:
-	p = open_new_shell()
-	try:
-		for cmd in test[0]:
-			p.stdin.write(cmd.encode() + b'\n')
-		p.stdin.close()
-		p.wait(1)
-	except subprocess.TimeoutExpired:
-		print('Too long no output. Probably you forgot to '\
-		      'handle "exit" manually')
-		finish(-1)
-	p.terminate()
-	if p.returncode != test[1]:
-		print('Wrong exit code in test "{}"'.format(test[0]))
-		print('Expected {}, got {}'.format(test[1], p.returncode))
-		exit_failure()
+    p = open_new_shell()
+    try:
+        for cmd in test[0]:
+            p.stdin.write(cmd.encode() + b'\n')
+        p.stdin.close()
+        p.wait(1)
+    except subprocess.TimeoutExpired:
+        print('Too long no output. Probably you forgot to handle "exit" manually')
+        sys.exit(-1)
+    p.terminate()
+    if p.returncode != test[1]:
+        print('Wrong exit code in test "{}"'.format(test[0]))
+        print('Expected {}, got {}'.format(test[1], p.returncode))
+        sys.exit(-1)
+print('✅ Passed')
 
+##########################################################################################
 # Test an extra long command. To ensure the shell doesn't have an internal
 # buffer size limit (well, it always can allocate like 1GB, but this has to be
 # caught at review).
-p = open_new_shell()
 count = 100 * 1024
+print('⏳ Test an extra long command ({} symbols)'.format(count))
+p = open_new_shell()
 output_expected = 'a' * count + '\n'
 command = 'echo ' + output_expected
+is_error = False
 try:
-	output = p.communicate(command.encode(), 5)[0].decode()
+    output = p.communicate(command.encode(), 5)[0].decode()
 except subprocess.TimeoutExpired:
-	print('Too long no output on an extra big command')
-	is_error = True
+    print('Too long no output on an extra big command')
+    is_error = True
 p.terminate()
 if not is_error and output != output_expected:
-	print('Bad output for an extra big command')
-	is_error = True
+    print('Bad output for an extra big command')
+    is_error = True
 if not is_error and p.returncode != 0:
-	print('Bad return code for an extra big command - expected 0 (success)')
-	is_error = True
+    print('Bad return code for an extra big command - expected 0 (success)')
+    is_error = True
 if is_error:
-	print('Failed an extra big command (`echo a....` with `a` '\
-	      'repeated {} times'.format(count))
-	exit_failure()
+    print('Failed an extra big command (`echo a....` with `a` '\
+          'repeated {} times'.format(count))
+    sys.exit(-1)
+print('✅ Passed')
 
+##########################################################################################
 # Test extra many args. To ensure the shell doesn't have an internal argument
 # count limit (insane limits like 1 million have to be caught at review).
+count = args.many_args_count
+print('⏳ Test extra many arguments ({} count)'.format(count))
 p = open_new_shell()
-count = 100 * 1000
 output_expected = 'a ' * (count - 1) + 'a\n'
 command = 'echo ' + output_expected
 try:
-	output = p.communicate(command.encode(), 5)[0].decode()
+    output = p.communicate(command.encode(), 5)[0].decode()
 except subprocess.TimeoutExpired:
-	print('Too long no output on a command with extra many args')
-	is_error = True
+    print('Too long no output on a command with extra many args')
+    is_error = True
 p.terminate()
 if not is_error and output != output_expected:
-	print('Bad output for a command with extra many args')
-	is_error = True
+    print('Bad output for a command with extra many args')
+    is_error = True
 if not is_error and p.returncode != 0:
-	print('Bad return code for a command with extra many args - '\
-	      'expected 0 (success)')
-	is_error = True
+    print('Bad return code for a command with extra many args - '\
+          'expected 0 (success)')
+    is_error = True
 if is_error:
-	print('Failed a command with extra many args (`echo a a a ...` with '\
-	      '`a` repeated {} times'.format(count))
-	exit_failure()
+    print('Failed a command with extra many args (`echo a a a ...` with '\
+          '`a` repeated {} times'.format(count))
+    sys.exit(-1)
+print('✅ Passed')
 
+##########################################################################################
 # Test an extra long pipe. To ensure that the shell doesn't have a limit on the
 # command count inside one line.
-p = open_new_shell()
 count = 1000
+print('⏳ Test an extra long pipe ({} commands)'.format(count))
+p = open_new_shell()
 output_expected = 'test'
 command = 'echo ' + output_expected + ' | cat' * count + '\n'
 output_expected += '\n'
 try:
-	output = p.communicate(command.encode(), 5)[0].decode()
+    output = p.communicate(command.encode(), 5)[0].decode()
 except subprocess.TimeoutExpired:
-	print('Too long no output on an extra long pipe')
-	is_error = True
+    print('Too long no output on an extra long pipe')
+    is_error = True
 p.terminate()
 if not is_error and output != output_expected:
-	print('Bad output for a command with an extra long pipe')
-	is_error = True
+    print('Bad output for a command with an extra long pipe')
+    is_error = True
 if not is_error and p.returncode != 0:
-	print('Bad return code for a command with an extra long pipe - '\
-	      'expected 0 (success)')
-	is_error = True
+    print('Bad return code for a command with an extra long pipe - '\
+          'expected 0 (success)')
+    is_error = True
 if is_error:
-	print('Failed a command with an extra long pipe '\
-	      '(`echo test | cat | cat | cat ... | cat` with '\
-	      '`cat` repeated {} times'.format(count))
-	exit_failure()
+    print('Failed a command with an extra long pipe '\
+          '(`echo test | cat | cat | cat ... | cat` with '\
+          '`cat` repeated {} times'.format(count))
+    sys.exit(-1)
 
-print('{}\nThe tests passed'.format(prefix))
-finish(0)
+print('✅ Passed')
+print('⏫ Points: {}'.format(points))
+cleanup()

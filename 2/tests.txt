@@ -1,166 +1,332 @@
-----------------------------------------------------------------01
-$> mkdir testdir
+######## Section base
 
-$> cd testdir
+----# Test { make a dir --------------------------------------------------------
+mkdir tmp
+cd tmp
+touch tmpfile
+ls
+cd ..
+ls
+cd tmp
+rm tmpfile
+cd ..
+rmdir tmp
+ls
+----# Output
+tmpfile
+tmp
+----# }
 
-$> pwd
-.../testdir
+----# Test { print the current path --------------------------------------------
+pwd | tail -c 8
+----# Output
+testdir
+----# }
 
-$>   pwd
-.../testdir
+----# Test { same but with more spaces -----------------------------------------
+   pwd | tail -c 8
+----# Output
+testdir
+----# }
 
-$> echo "a
+----# Test { multiline, string, pipe -------------------------------------------
+echo "a
 
 
 
 b" | cat -s
+----# Output
 a
 
 b
+----# }
 
-----------------------------------------------------------------02
-$> touch "my file with whitespaces in name.txt"
+----# Test { create a file with spaces in name ---------------------------------
+touch "my file with whitespaces in name.txt"
+----# }
 
-$> ls
+----# Test { get file list -----------------------------------------------------
+ls
+----# Output
 my file with whitespaces in name.txt
+----# }
 
-$> echo '123 456 \" str \"'
+----# Test { echo with string escapes ------------------------------------------
+echo '123 456 \" str \"'
+----# Output
 123 456 \" str \"
+----# }
 
-$> echo '123 456 \" str \"' > "my file with whitespaces in name.txt"
+----# Test { echo redirect into the file ---------------------------------------
+echo '123 456 \" str \"' > "my file with whitespaces in name.txt"
+----# }
 
-$> cat my\ file\ with\ whitespaces\ in\ name.txt
+----# Test { print the file ----------------------------------------------------
+cat my\ file\ with\ whitespaces\ in\ name.txt
+----# Output
 123 456 \" str \"
+----# }
 
-$> echo "test" >> "my file with whitespaces in name.txt"
+----# Test { append to the file ------------------------------------------------
+echo "test" >> "my file with whitespaces in name.txt"
+----# }
 
-$> cat "my file with whitespaces in name.txt"
+----# Test { print the file ----------------------------------------------------
+cat "my file with whitespaces in name.txt"
+----# Output
 123 456 \" str \"
 test
+----# }
 
-$> echo 'truncate' > "my file with whitespaces in name.txt"
+----# Test { replace the file content ------------------------------------------
+echo 'truncate' > "my file with whitespaces in name.txt"
+----# }
 
-$> cat "my file with whitespaces in name.txt"
+----# Test { print the file ----------------------------------------------------
+cat "my file with whitespaces in name.txt"
+----# Output
 truncate
+----# }
 
-$> echo "test 'test'' \\" >> "my file with whitespaces in name.txt"
+----# Test { append to the file a complex string with escapes ------------------
+echo "test 'test'' \\" >> "my file with whitespaces in name.txt"
+----# }
 
-$> cat "my file with whitespaces in name.txt"
+----# Test { print and delete the file -----------------------------------------
+cat "my file with whitespaces in name.txt"
+rm my\ file\ with\ whitespaces\ in\ name.txt
+----# Output
 truncate
 test 'test'' \
+----# }
 
-$> echo "4">file
+----# Test { create new file via redirect --------------------------------------
+echo "4">file
+----# }
 
-$> cat file
+----# Test { print the file ----------------------------------------------------
+cat file
+----# Output
 4
+----# }
 
-$> echo 100|grep 100
-100
+----# Test { comment -----------------------------------------------------------
+# Comment
+----# }
 
-----------------------------------------------------------------03
-
-$> # Comment
-
-$> echo 123\
+----# Test { line wrap ---------------------------------------------------------
+echo 123\
 456
-
+----# Output
 123456
+----# }
 
-----------------------------------------------------------------04
-
-$> rm my\ file\ with\ whitespaces\ in\ name.txt
-
-$> echo 123 | grep 2
+----# Test { pipe --------------------------------------------------------------
+echo 123 | grep 2
+----# Output
 123
+----# }
 
-$> echo 123\
+----# Test { pipe without spaces -----------------------------------------------
+echo 100|grep 100
+----# Output
+100
+----# }
+
+----# Test { pipe multiline escape ---------------------------------------------
+echo 123\
 456\
 | grep 2
+----# Output
 123456
+----# }
 
-$> echo "123
+----# Test { pipe multiline string ---------------------------------------------
+echo "123
 456
 7
 " | grep 4
+----# Output
 456
+----# }
 
-$> echo 'source string' | sed 's/source/destination/g'
+----# Test { pipe sed ----------------------------------------------------------
+echo 'source string' | sed 's/source/destination/g'
+----# Output
 destination string
+----# }
 
-$> echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g'
+----# Test { pipe sed twice ----------------------------------------------------
+echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g'
+----# Output
 destination value
+----# }
 
-$> echo 'source string' |\
+----# Test { pipe sed multiline ------------------------------------------------
+echo 'source string' |\
 sed 's/source/destination/g'\
 | sed 's/string/value/g'
+----# Output
 destination value
+----# }
 
-$> echo 'test' | exit 123 | grep 'test'
+----# Test { exit code in the middle of pipe -----------------------------------
+echo 'test' | exit 123 | grep 'test'
+----# }
 
-$> echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g' > result.txt
-
-$> cat result.txt
+----# Test { sed pipe redirect -------------------------------------------------
+echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g' > result.txt
+cat result.txt
+----# Output
 destination value
+----# }
 
-$> yes bigdata | head -n 100000 | wc -l | tr -d [:blank:]
+----# Test { big data ----------------------------------------------------------
+yes bigdata | head -n 100000 | wc -l | tr -d [:blank:]
+----# Output
 100000
+----# }
 
-$> exit 123 | echo 100
+----# Test { exit code in first command ----------------------------------------
+exit 123 | echo 100
+----# Output
 100
+----# }
 
-$> echo 100 | exit 123
+----# Test { exit code in last command -----------------------------------------
+echo 100 | exit 123
+----# }
 
-$> printf "import time\n\
+----# Test { python script create and run --------------------------------------
+printf "import time\n\
 time.sleep(0.1)\n\
 f = open('test.txt', 'a')\n\
 f.write('Text\\\\n')\n\
 f.close()\n" > test.py
 
-$> python test.py | exit 0
+python3 test.py | exit 0
 
-$> cat test.txt
+cat test.txt
+----# Output
 Text
+----# }
 
-----------------------------------------------------------------05
+######## Section bonus logical operators
 
-$> false && echo 123
+----# Test { basic and false ---------------------------------------------------
+false && echo 123
+----# }
 
-$> true && echo 123
+----# Test { basic and true ----------------------------------------------------
+true && echo 123
+----# Output
 123
+----# }
 
-$> true || false && echo 123
+----# Test { tricky priority ---------------------------------------------------
+true || false && echo 123
+----# Output
 123
+----# }
 
-$> true || false || true && echo 123
+----# Test { more tricky priority ----------------------------------------------
+true || false || true && echo 123
+----# Output
 123
+----# }
 
-$> false || echo 123
+----# Test { basic or false ----------------------------------------------------
+false || echo 123
+----# Output
 123
+----# }
 
-$> echo 100 || echo 200
+----# Test { basic or echo -----------------------------------------------------
+echo 100 || echo 200
+----# Output
 100
+----# }
 
-$> echo 100 && echo 200
+----# Test { basic and echo ----------------------------------------------------
+echo 100 && echo 200
+----# Output
 100
 200
+----# }
 
-$> echo 100 | grep 1 || echo 200 | grep 2
+----# Test { or and pipes ------------------------------------------------------
+echo 100 | grep 1 || echo 200 | grep 2
+----# Output
 100
+----# }
 
-$> echo 100 | grep 1 && echo 200 | grep 2
+----# Test { and and pipes -----------------------------------------------------
+echo 100 | grep 1 && echo 200 | grep 2
+----# Output
 100
 200
+----# }
 
-----------------------------------------------------------------06
+######## Section bonus background
 
-$> sleep 0.5 && echo 'back sleep is done' &
+----# Test { basic
+mkfifo chan
+echo '100' > chan &
+echo 'foreground work'
+cat chan
+rm chan
+----# Output
+foreground work
+100
+----# }
 
-$> echo 'next sleep is done'
-next sleep is done
+----# Test { pipe
+mkfifo chan
+echo '100
+200
+300
+' | grep 2 > chan &
+echo 'foreground work'
+cat chan
+rm chan
+----# Output
+foreground work
+200
+----# }
 
-$> sleep 0.5
-back sleep is done
+----# Test { order
+mkfifo chan1
+mkfifo chan2
+mkfifo chan3
+echo '100' > chan1 &
+echo '200' > chan2 &
+echo '300' > chan3 &
+echo 'foreground work'
+cat chan2
+cat chan3
+cat chan1
+rm chan1
+rm chan2
+rm chan3
+----# Output
+foreground work
+200
+300
+100
+----# }
 
-$> sleep 0.1 && exit 1 &
+######## Section bonus all
 
-$> echo 100
+----# Test { basic
+mkfifo chan
+touch tmp.txt && echo 100 > chan &
+echo 'foreground work'
+cat chan
+rm chan
+rm tmp.txt
+echo 'all clean'
+----# Output
+foreground work
+100
+all clean
+----# }
