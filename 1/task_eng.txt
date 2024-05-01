@@ -105,20 +105,47 @@ several options how you use them:
   sorting loops.
 
 - +5 points: each of N coroutines is given T / N microseconds,
-  where T - target latency given as a command line parameter.
+  where T - target latency given as a command line parameter `-l`
+  like so:
+
+    -l <number >= 0>
+
+  For example:
+
+    -l 0 # Yield always.
+    -l 10 # Yield not more often than 10 microsec.
+    -l 120 # Yield not more often than 120 microsec.
+
+  For the command line params parsing you have to use the standard
+  getopt() function.
+
   After each sorting loop iteration you yield only if the current
   coroutine's time quantum is over.
 
-- +5 points: allow to specify the number of coroutines. Each
-  coroutine should work as follows: if there are unsorted files,
-  then pick one and sort it, then repeat. If there are no unsorted
-  files, then the coroutine exits. For example, assume there are
-  10 files given and 3 coroutines. They pick 1 file each, 7 files
-  are waiting. One coroutine finishes the sorting, picks up a next
-  file (6 are waiting). Another coroutine finishes some other
-  and picks up the next one (5 files remaining). And so on until
-  all files are sorted. Then you do the normal merge sort. This
-  bonus task basically offers you do implement a coroutine pool.
+- +5 points: allow to specify the number of coroutines via the
+  command line parameter `-n` like so:
+
+    -n <number > 0>
+
+  For example:
+
+    -n 1 # Use one coroutine for all files.
+    -n 5 # Use 5 coroutines for all files.
+
+  For the command line params parsing you have to use the standard
+  getopt() function.
+
+  Each coroutine should work as follows: if there are unsorted
+  files, then pick one and sort it, then repeat. If there are no
+  unsorted files, then the coroutine exits.
+
+  For instance, assume there are 10 files and 3 coroutines (-n 3).
+  They pick 1 file each, 7 files are waiting. One coroutine
+  finishes the sorting, picks up a next file (6 are waiting).
+  Another coroutine finishes some other file and picks up the next
+  one (5 files remaining). And so on until all files are sorted.
+  Then you do the normal merge sort. This bonus task basically
+  offers you do implement a coroutine pool.
 
 - -5 points: (yes, minus, not plus) - you can use C++ and STL
   containers. Including std::iostream/ostream/etc. But you still
@@ -131,7 +158,7 @@ both for +10. Or use C++ and get -5 to your sum.
 Input: names of files to sort via the command line arguments. If
 you do the bonus tasks, then you also get the target latency in
 microseconds (if you do that bonus) and the coroutine count (if
-you do that bonus) before the file names.
+you do that bonus).
 
 Output: total work time, work time and number of context switches
 for each individual coroutine. Keep in mind that the coroutine
