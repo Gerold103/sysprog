@@ -1,51 +1,51 @@
-## Multitasking, scheduling
+## 1 - Multitasking, scheduling
 
-- What are the two types of multitasking? How are they different?
-- What is the difference between coroutine and thread?
+1. What are the two types of multitasking? How are they different?
+2. What is the difference between coroutine and thread?
 
-## Process
+## 2 - Process
 
-- What are system calls? Why are they needed? How do they work? Explain the most modern way of their invocation.
-- When can process’ threads be interrupted by the kernel?
+1. What are system calls? Why are they needed? How do they work? Explain the most modern way of their invocation.
+2. When can process’ threads be interrupted by the kernel?
 
-## Memory
+## 3 - Memory
 
-- What is false-sharing? Explain how it can happen and how to fix it.
-- What is virtual memory? How is it translated into physical memory?
-- What is between main memory and CPU? Why is this intermediate layer needed?
+1. What is false-sharing? Explain how it can happen and how to fix it.
+2. What is virtual memory? How is it translated into physical memory?
+3. What is between main memory and CPU? Why is this intermediate layer needed?
 
-## Signals
+## 4 - Signals
 
-- What are signals, like SIGABRT, SIGSEGV, SIGINT, and others? Where are they coming from and when?
-- What are the 2 APIs for managing signal handling? Which one should be avoided and why?
+1. What are signals, like SIGABRT, SIGSEGV, SIGINT, and others? Where are they coming from and when?
+2. What are the 2 APIs for managing signal handling? Which one should be avoided and why?
 
-## File system, storage
+## 5 - File system, storage
 
-- How does the kernel automatically understands what kind of file system is stored on a device?
-- What are the 2 main tasks of IO operations scheduler in the kernel?
-- Assume I opened a file stored on a device and got a descriptor fd. What guarantees do I have after I call write(fd, data) regarding data persistency and why?
-- Name at least 2 ways how the kernel speeds up the access to the storage devices.
-- Explain how HDD and SSD work. Which one is better or worse in which regard?
+1. How does the kernel automatically understands what kind of file system is stored on a device?
+2. What are the 2 main tasks of IO operations scheduler in the kernel?
+3. Assume I opened a file stored on a device and got a descriptor fd. What guarantees do I have after I call write(fd, data) regarding data persistency and why?
+4. Name at least 2 ways how the kernel speeds up the access to the storage devices.
+5. Explain how HDD and SSD work. Which one is better or worse in which regard?
 
-## Threads
+## 6 - Threads
 
-- Explain the difference between threads and processes.
-- How to protect access to data when multiple threads are doing reads and writes on it? How does this protection work?
-- What are lock-free atomic operations and their memory orders: relaxed, acquire, release, sequential-consistency?
-- A thread T1 wants to go to sleep until a flag F is set to true in another thread T2. Write code for the waiting in T1 and for setting the flag in T2. You must use a mutex and a condition variable. Busy-loop waiting and sleep/usleep/nanosleep/yield/all-alike are not allowed.
+1. Explain the difference between threads and processes.
+2. How to protect access to data when multiple threads are doing reads and writes on it? How does this protection work?
+3. What are lock-free atomic operations and their memory orders: relaxed, acquire, release, sequential-consistency?
+4. A thread T1 wants to go to sleep until a flag F is set to true in another thread T2. Write code for the waiting in T1 and for setting the flag in T2. You must use a mutex and a condition variable. Busy-loop waiting and sleep/usleep/nanosleep/yield/all-alike are not allowed.
 
-## IPC
+## 7 - IPC
 
-- What is IPC? What kinds of them do you know? Name at least 3 named IPCs and tell what they do.
-- What is pipe()? What is it mainly used for? What happens with the pipe’s ends when I call fork()? What happens if I try to read the read-end of a pipe which has no data, but also it has at least one not closed write-end?
+1. What is IPC? What kinds of them do you know? Name at least 3 named IPCs and tell what they do.
+2. What is pipe()? What is it mainly used for? What happens with the pipe’s ends when I call fork()? What happens if I try to read the read-end of a pipe which has no data, but also it has at least one not closed write-end?
 
-## Network
+## 8 - Network
 
-- Name the TCP/IP network model layers and tell briefly what they do.
-- How do TCP and UDP protocols work? What are the differences?
-- What is a TCP-connection exactly? At which layer of TCP/IP model does it appear?
+1. Name the TCP/IP network model layers and tell briefly what they do.
+2. How do TCP and UDP protocols work? What are the differences?
+3. What is a TCP-connection exactly? At which layer of TCP/IP model does it appear?
 
-## Advanced IO
+## 9 - Advanced IO
 
-- What is select() and why is it dangerous? What is the closest alternative which is fine to use? What are the other more scalable ways of doing what select() is doing?
-- What is the difference between epoll/kqueue/IOCP and poll()? When are those suitable best?
+1. What is select() and why is it dangerous? What is the closest alternative which is fine to use? What are the other more scalable ways of doing what select() is doing?
+2. What is the difference between epoll/kqueue/IOCP and poll()? When are those suitable best?
