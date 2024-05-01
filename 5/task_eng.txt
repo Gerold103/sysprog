@@ -78,6 +78,11 @@ Restrictions:
   The ptr/udata must be used for matching events to their sockets
   after return from epoll_wait() and kevent().
 
+- When epoll is used, you have to read about EPOLLET and use it.
+  Usage of EPOLL_CTL_MOD is not allowed.
+
+- When kqueue is used, you have to use EV_CLEAR.
+
 - The attached makefile should keep working and compilation should
   have zero warnings/errors. Alternatively you can try to use
   cmake, but then need to keep all the same compiler options.
