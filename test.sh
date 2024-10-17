@@ -4,7 +4,7 @@
 
 hw_number=$(jq -r '.hw_number' "$RESOURCES_DIR_MOUNT/hw_number.json") 
 
-unzip -o $SOLUTION_MOUNT/solution.zip -d $SOLUTION_MOUNT/
+unzip -o $SOLUTION_MOUNT/*.zip -d $SOLUTION_MOUNT/
 
 if [ "$hw_number" -eq 1 ]; then
 	# In Work ...
