@@ -120,6 +120,20 @@ ufs_delete(const char *filename)
 	return -1;
 }
 
+#if NEED_RESIZE
+
+int
+ufs_resize(int fd, size_t new_size)
+{
+	/* IMPLEMENT THIS FUNCTION */
+	(void)fd;
+	(void)new_size;
+	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
+	return -1;
+}
+
+#endif
+
 void
 ufs_destroy(void)
 {

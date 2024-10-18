@@ -13,7 +13,12 @@ exe: lib chat_client_exe.c chat_server_exe.c
 
 test: lib
 	gcc $(GCC_FLAGS) test.c chat.o chat_client.o chat_server.o -o test 	\
-		-I ../utils -lpthread
+		../utils/unit.c -I ../utils -lpthread
+
+# For automatic testing systems to be able to just build whatever was submitted
+# by a student.
+test_glob:
+	gcc $(GCC_FLAGS) *.c ../utils/unit.c -I ../utils -lpthread -o test
 
 clean:
 	rm *.o

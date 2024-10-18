@@ -83,7 +83,7 @@ thread_task_join(struct thread_task *task, void **result)
 	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
-#ifdef NEED_TIMED_JOIN
+#if NEED_TIMED_JOIN
 
 int
 thread_task_timed_join(struct thread_task *task, double timeout, void **result)
@@ -105,7 +105,7 @@ thread_task_delete(struct thread_task *task)
 	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
-#ifdef NEED_DETACH
+#if NEED_DETACH
 
 int
 thread_task_detach(struct thread_task *task)

@@ -337,7 +337,7 @@ test_max_file_size(void)
 static void
 test_rights(void)
 {
-#ifdef NEED_OPEN_FLAGS
+#if NEED_OPEN_FLAGS
 	unit_test_start();
 
 	int fd = ufs_open("file", UFS_CREATE);
@@ -412,7 +412,7 @@ test_rights(void)
 static void
 test_resize(void)
 {
-#ifdef NEED_RESIZE
+#if NEED_RESIZE
 	unit_test_start();
 	/*
 	 * One descriptor for shrinking and then access again.
@@ -470,8 +470,19 @@ test_resize(void)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
+	if (doCmdMaxPoints(argc, argv)) {
+		int result = 15;
+#if NEED_OPEN_FLAGS
+		result += 5;
+#endif
+#if NEED_RESIZE
+		result += 5;
+#endif
+		printf("%d\n", result);
+		return 0;
+	}
 	unit_test_start();
 
 	test_open();

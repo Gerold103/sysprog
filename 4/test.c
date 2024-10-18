@@ -257,7 +257,7 @@ test_thread_pool_max_tasks(void)
 static void
 test_timed_join(void)
 {
-#ifdef NEED_TIMED_JOIN
+#if NEED_TIMED_JOIN
 	unit_test_start();
 
 	struct thread_pool *p;
@@ -302,7 +302,7 @@ test_timed_join(void)
 static void
 test_detach_stress(void)
 {
-#ifdef NEED_DETACH
+#if NEED_DETACH
 	unit_test_start();
 
 	struct thread_pool *p;
@@ -341,7 +341,7 @@ test_detach_stress(void)
 static void
 test_detach_long(void)
 {
-#ifdef NEED_DETACH
+#if NEED_DETACH
 	unit_test_start();
 
 	struct thread_pool *p;
@@ -364,8 +364,19 @@ test_detach_long(void)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
+	if (doCmdMaxPoints(argc, argv)) {
+		int result = 15;
+#if NEED_DETACH
+		result += 5;
+#endif
+#if NEED_TIMED_JOIN
+		result += 5;
+#endif
+		printf("%d\n", result);
+		return 0;
+	}
 	unit_test_start();
 
 	test_new();

@@ -6,15 +6,17 @@
  * Here you should specify which features do you want to implement via macros:
  * NEED_DETACH and NEED_TIMED_JOIN. If you want to enable detach, do:
  *
- *     #define NEED_DETACH
+ *     #define NEED_DETACH 1
  *
  * To enable timed join do:
  *
- *     #define NEED_TIMED_JOIN
+ *     #define NEED_TIMED_JOIN 1
  *
  * It is important to define these macros here, in the header, because it is
  * used by tests.
  */
+#define NEED_DETACH 0
+#define NEED_TIMED_JOIN 0
 
 struct thread_pool;
 struct thread_task;
@@ -125,7 +127,7 @@ thread_task_is_running(const struct thread_task *task);
 int
 thread_task_join(struct thread_task *task, void **result);
 
-#ifdef NEED_TIMED_JOIN
+#if NEED_TIMED_JOIN
 
 /**
  * Like thread_task_join() but wait no longer than the timeout.
@@ -156,7 +158,7 @@ thread_task_timed_join(struct thread_task *task, double timeout, void **result);
 int
 thread_task_delete(struct thread_task *task);
 
-#ifdef NEED_DETACH
+#if NEED_DETACH
 
 /**
  * Detach a task so as to auto-delete it when it is finished.

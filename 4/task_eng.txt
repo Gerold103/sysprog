@@ -88,11 +88,12 @@ Possible solutions:
   not hidden inside macros.
 
 - +5 points: implement thread_task_detach(). The documentation is
-  in thread_pool.h. You need to define the macro NEED_DETACH then.
+  in thread_pool.h. You need to define the macro NEED_DETACH to 1
+  then.
 
 - +5 points: implement thread_task_timed_join(). The documentation
   is in thread_pool.h. You need to define the macro
-  NEED_TIMED_JOIN then.
+  NEED_TIMED_JOIN to 1 then.
 
 - -5 points: (yes, minus, not plus) - you can use C++, STL
   containers, std::thread, std::mutex, etc.

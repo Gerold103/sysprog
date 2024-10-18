@@ -142,7 +142,7 @@ client_pop_next_blocking(struct chat_client *c, struct chat_server *s)
 static bool
 author_is_eq(const struct chat_message *msg, const char *name)
 {
-#ifdef NEED_AUTHOR
+#if NEED_AUTHOR
 	return strcmp(msg->author, name) == 0;
 #else
 	(void)msg;
@@ -548,7 +548,7 @@ test_stress(void)
 static void
 test_big_author(void)
 {
-#ifdef NEED_AUTHOR
+#if NEED_AUTHOR
 	unit_test_start();
 
 	uint64_t author1_len = 10 * 1024 * 1024;
@@ -678,8 +678,19 @@ test_server_feed(void)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
+	if (doCmdMaxPoints(argc, argv)) {
+		int result = 15;
+#if NEED_AUTHOR
+		result += 5;
+#endif
+#if NEED_SERVER_FEED
+		result += 5;
+#endif
+		printf("%d\n", result);
+		return 0;
+	}
 	unit_test_start();
 
 	test_basic();

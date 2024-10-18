@@ -14,15 +14,17 @@
  * via macros: NEED_OPEN_FLAGS and NEED_RESIZE. If you want to
  * allow advanced flags, do this here:
  *
- *     #define NEED_OPEN_FLAGS
+ *     #define NEED_OPEN_FLAGS 1
  *
  * To allow resize() functions define this:
  *
- *     #define NEED_RESIZE
+ *     #define NEED_RESIZE 1
  *
  * It is important to define these macros here, in the header,
  * because it is used by tests.
  */
+#define NEED_OPEN_FLAGS 0
+#define NEED_RESIZE 0
 
 /**
  * Flags for ufs_open call.
@@ -34,7 +36,7 @@ enum open_flags {
 	 */
 	UFS_CREATE = 1,
 
-#ifdef NEED_OPEN_FLAGS
+#if NEED_OPEN_FLAGS
 
 	/**
 	 * With this flag it is allowed to only read the file.
@@ -61,7 +63,7 @@ enum ufs_error_code {
 	UFS_ERR_NO_MEM,
 	UFS_ERR_NOT_IMPLEMENTED,
 
-#ifdef NEED_OPEN_FLAGS
+#if NEED_OPEN_FLAGS
 
 	UFS_ERR_NO_PERMISSION,
 #endif
@@ -137,7 +139,7 @@ ufs_close(int fd);
 int
 ufs_delete(const char *filename);
 
-#ifdef NEED_RESIZE
+#if NEED_RESIZE
 
 /**
  * Resize a file opened by the file descriptor @a fd. If current

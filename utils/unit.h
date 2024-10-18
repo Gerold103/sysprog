@@ -31,3 +31,5 @@
 		printf("ok - %s\n", (msg));				\
 	}								\
 } while(0)
+
+bool doCmdMaxPoints(int argc, char **argv);

@@ -1,10 +1,11 @@
 GCC_FLAGS = -Wextra -Werror -Wall -Wno-gnu-folding-constant
 
-all: test.o thread_pool.o
-	gcc $(GCC_FLAGS) test.o thread_pool.o
+all: test
 
-test.o: test.c
-	gcc $(GCC_FLAGS) -c test.c -o test.o -I ../utils
+test:
+	gcc $(GCC_FLAGS) thread_pool.c test.c ../utils/unit.c -I ../utils -o test
 
-thread_pool.o: thread_pool.c
-	gcc $(GCC_FLAGS) -c thread_pool.c -o thread_pool.o
+# For automatic testing systems to be able to just build whatever was submitted
+# by a student.
+test_glob:
+	gcc $(GCC_FLAGS) *.c ../utils/unit.c -I ../utils -o test
