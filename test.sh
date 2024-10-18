@@ -2,35 +2,35 @@
 
 # Build all *.c files. And then + leaks.
 
-hw_number=$(jq -r '.hw_number' "$RESOURCES_DIR_MOUNT/hw_number.json") 
+hw=$(jq -r '.hw' "$RESOURCES_DIR_MOUNT/settings.json") 
 
-unzip -o $SOLUTION_MOUNT/*.zip -d $SOLUTION_MOUNT/
+unzip -o $SOLUTION_MOUNT -d /sysprog
 
-if [ "$hw_number" -eq 1 ]; then
+if [ "$hw" -eq 1 ]; then
 	# In Work ...
 	echo ""
-elif [ "$hw_number" -eq 2 ]; then
-    cp $RESOURCES_DIR_MOUNT/checker.py $SOLUTION_MOUNT
-	cp $RESOURCES_DIR_MOUNT/Makefile $SOLUTION_MOUNT
-	cd $SOLUTION_MOUNT
+elif [ "$hw" -eq 2 ]; then
+    cp $RESOURCES_DIR_MOUNT/checker.py /sysprog
+	cp $RESOURCES_DIR_MOUNT/Makefile /sysprog
+	cd /sysprog
 	make
-	if python3 $SOLUTION_MOUNT/checker.py --max 25; then
+	if python3 /sysprog/checker.py --max 25; then
 		status="OK"
 		score="25"
-	elif python3 $SOLUTION_MOUNT/checker.py --max 20; then
+	elif python3 /sysprog/checker.py --max 20; then
 		status="OK"
 		score="20"
-	elif python3 $SOLUTION_MOUNT/checker.py --max 15; then
+	elif python3 /sysprog/checker.py --max 15; then
 		status="OK"
 		score="15"
 	else 
 		status="FAIL"
 		score="0"
 	fi
-elif [ "$hw_number" -eq 3 ] || [ "$hw_number" -eq 4 ] || [ "$hw_number" -eq 5 ]; then
+elif [ "$hw" -eq 3 ] || [ "$hw" -eq 4 ] || [ "$hw" -eq 5 ]; then
 	# In work ...
-	cp $RESOURCES_DIR_MOUNT/test.c $SOLUTION_MOUNT
-	cp $RESOURCES_DIR_MOUNT/Makefile $SOLUTION_MOUNT
+	cp $RESOURCES_DIR_MOUNT/test.c /sysprog
+	cp $RESOURCES_DIR_MOUNT/Makefile /sysprog
 	cd $SOLUTION_MOUNT
 	make
 	if ./test; then
