@@ -31,7 +31,7 @@ elif [ "$hw" -eq 2 ]; then
 	elif python3 checker.py --with_background 1 -e ./mybash; then
 		status='"OK"'
 		score="20"
-	elif python3 checker.py -e ./mybash --verbose 1; then
+	elif python3 checker.py -e ./mybash; then
 		status='"OK'
 		score="15"
 	else 
