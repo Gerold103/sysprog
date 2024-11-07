@@ -18,6 +18,7 @@ if [ "$hw" -eq 1 ]; then
 elif [ "$hw" -eq 2 ]; then
     cp $RESOURCES_DIR_MOUNT/2/checker.py /sysprog/solution
 	cp $RESOURCES_DIR_MOUNT/2/Makefile /sysprog/solution
+	rm /sysprog/solution/parser_test.c
 	cd /sysprog/solution
 
 	make test_glob
@@ -41,6 +42,11 @@ elif [ "$hw" -eq 2 ]; then
 elif [ "$hw" -eq 3 ] || [ "$hw" -eq 4 ] || [ "$hw" -eq 5 ]; then
 	cp $RESOURCES_DIR_MOUNT/"$hw"/test.c /sysprog/solution
 	cp $RESOURCES_DIR_MOUNT/"$hw"/Makefile /sysprog/solution
+
+	if [ "$hw" -eq 5 ]; then
+		rm /sysprog/solution/*_exe.c
+	fi
+
 	cd /sysprog/solution
 	
 	make test_glob
