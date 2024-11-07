@@ -6,13 +6,12 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     tzdata unzip jq python3 clang make
 RUN ln /usr/bin/clang /usr/bin/gcc
 RUN mkdir /sysprog
+RUN mkdir /sysprog/solution
 
 WORKDIR /sysprog
-RUN mkdir ./solution
-RUN mkdir ./results
 
 ENV RESOURCES_DIR_MOUNT='/tmp/data'
-ENV SOLUTION_MOUNT='/sysprog/solution/*.zip'
-ENV RESULT_LOCATION='/sysprog/results/output.json'
+ENV SOLUTION_MOUNT='/opt/client/input'
+ENV RESULT_LOCATION='/opt/results/output.json'
 
 CMD ["/tmp/data/test.sh"]
