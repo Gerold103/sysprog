@@ -15,8 +15,9 @@ status='"ERR"'
 score=0
 
 if [ "$hw" -eq 2 ]; then
-    cp $RESOURCES_DIR_MOUNT/2/checker.py /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/2/checker.py /sysprog/solution
 	cp $RESOURCES_DIR_MOUNT/2/Makefile /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/2/tests.txt /sysprog/solution
 	rm /sysprog/solution/parser_test.c
 	cd /sysprog/solution
 
