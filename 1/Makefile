@@ -1,7 +1,10 @@
-GCC_FLAGS = -Wextra -Werror -Wall -Wno-gnu-folding-constant
+GCC_FLAGS = -Wextra -Werror -Wall -Wno-gnu-folding-constant -g
 
-all: libcoro.c solution.c
-	gcc $(GCC_FLAGS) libcoro.c solution.c
+all:
+	gcc $(GCC_FLAGS) libcoro.c corobus.c test.c ../utils/unit.c \
+		-I ../utils -o test
 
-clean:
-	rm a.out
+# For automatic testing systems to be able to just build whatever was submitted
+# by a student.
+test_glob:
+	gcc $(GCC_FLAGS) *.c ../utils/unit.c -I ../utils -o test

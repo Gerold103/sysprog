@@ -1,28 +1,43 @@
 ------------------------------------------------------------------
-Merge sort in coroutines.
+Coroutine messaging system
 Language: С.
 Deadline: 2 weeks.
 ------------------------------------------------------------------
 
-Files are stored on the disk. They store integers in arbitrary
-order separated by whitespaces. Each file should be sorted, and
-then results should be merged into a new file. That is, merge sort
-should be implemented.
+There is a messaging object called bus, like on a motherboard. The
+bus allows to open channels which can be used for sending trivial
+messages.
+
+Need to implement this bus messaging object with coroutine
+support.
+
+Coroutine, also known as a co-program, a light thread, a virtual
+thread, a green thread, a fiber, is a unit of the program flow.
+It runs linear code and has a stack, same as a regular thread, but
+it can't be scheduled by the kernel. Instead, the coroutines are
+user space objects, and they are scheduled entirely by the user
+space. The simplest setup is when one thread has many coroutines
+inside and can run them in turns.
+
+The coroutines themselves are already implemented, and the bus'
+idea is very simple. The main challenge is to make the bus
+compatible with these coroutines.
+
+For instance, the bus channel has a size limit. When a coroutine
+tries to send a message into the channel and the size limit is
+reached, the coroutine must be suspended until there is space in
+the channel.
+
+The tests are in test.c. The implementation template is in
+corobus.h and corobus.c.
 
 
 Rules:
 
-- Each file should be sorted in its own coroutine. This rule
-  targets your understanding of what cooperative multitasking is.
+- Need to strictly follow the behaviour of each function explained
+  in corobus.h comments.
 
-- Files have ASCII encoding. I.e. they are plain text. Not unicode
-  or anything.
-
-- For time measurements you should use
-  clock_gettime(CLOCK_MONOTONIC). Non-monotonic clocks (such as
-  time(), gettimeofday(), CLOCK_REALTIME, etc) can go backwards
-  sometimes, screwing the time measurements. clock() is monotonic,
-  but doesn't account time spent in blocking syscalls.
+- The provided tests must all pass.
 
 - The code should be built successfully with these compiler flags:
   `-Wextra -Werror -Wall -Wno-gnu-folding-constant`.
@@ -37,147 +52,53 @@ Restrictions:
   utils/heap_help tool. Showing zero leak reports from Valgrind or
   ASAN is not enough - they often miss the leaks.
 
-- Sorting should be implemented by you without built-in functions
-  like qsort(), system("sort ...") etc.
-
-- Sorting complexity of the individual files should be < O(N^2)
-  (for example, you can't use bubble sort). Given that
-  restriction, you can choose any sorting algorithm such as
-  "quick sort".
-
-- Total execution time is limited. But since the students have
-  different hardware, the limit is for my own PC. With 2.5GHz
-  CPU and an SSD sorting of 6 files each having 40k numbers
-  shouldn't take longer than a second. Normally it should even
-  take 100-200 ms, but 1 second will do as well.
-
-- Work with files should be done
-
-  - either via a numeric file descriptor using open() / read() /
-    write() / close() functions,
-
-  - or via FILE* and functions fopen() / fscanf() / fprintf() /
-    fclose(). It is not allowed to use std::iostream,
-    std::ostream, std::istream and other STL helpers.
+- Can not change test.c, libcoro.c, libcoro.h.
 
 
 Relaxations:
 
-- Numbers fit into 'int' type.
+- You can assume, that malloc()/realloc()/calloc() never fail.
 
-- You can assume, that all the files fit into the main memory,
-  even together.
-
-- The final step - merging of the sorted files - can be done right
-  in main() without any coroutines.
+- Use can use intrusive list container defined in utils/rlist.h.
 
 
 Advices:
 
-- You can find more info about various unknown functions using
-  'man' command line utility. For example, 'man read' (or
-  'man 2 read') prints manual for 'read()' function. 'man strdup'
-  can tell more about 'strdup()' function. Similar for other
-  built-in functions.
+- Try to inspect the libcoro_test.c and test.c to see how the
+  coroutines are used. Try to run libcoro_test.c, add some prints,
+  use a debugger, to see how what works.
 
-- Steps which you can follow if don't know where to start:
+- Read libcoro.h to see what kind of API you have available. See
+  what could be used in your solutions for which things.
 
-  - Implement normal sorting of one file. No coroutines or
-    multiple files. Just read and sort a single file. Test this
-    code.
+- Once you understand the libcoro coroutines, try to design your
+  solution. In your head at first, then write it down as text. Do
+  not start coding until you know what to code. Think first, code
+  second.
 
-  - Extend your code to sort multiple files and do the merge
-    sort, also without coroutines. Check it on the real tests.
-    This will allow to concentrate on adding coroutines, and not
-    to waste time on debugging both coroutines and sorting at the
-    same time.
-
-  - Start using coroutines.
+- Implement firstly 'try_send', 'try_recv', and others 'try'. They
+  do not block the current coroutine, which makes them quite
+  trivial. Then try to implement 'send' via 'try_send', 'recv' via
+  'try_recv', and so on.
 
 
 Possible solutions:
 
-The coroutines should switch between each other. Do the so called
-'yield's. These are coro_yield() in the solution.c file. There are
-several options how you use them:
+- 15 points: pass all the basic tests.
 
-- 15 points: yield after each iteration in your individual files
-  sorting loops.
+- +5 points: implement 'broadcast'. To enable broadcast tests you
+  should define the macro NEED_BROADCAST to 1 in corobus.h. The
+  tests must pass. Refer to corobus.h header to see what the
+  broadcast functions should be doing.
 
-- +5 points: each of N coroutines is given T / N microseconds,
-  where T - target latency given as a command line parameter `-l`
-  like so:
-
-    -l <number >= 0>
-
-  For example:
-
-    -l 0 # Yield always.
-    -l 10 # Yield not more often than 10 microsec.
-    -l 120 # Yield not more often than 120 microsec.
-
-  For the command line params parsing you have to use the standard
-  getopt() function.
-
-  After each sorting loop iteration you yield only if the current
-  coroutine's time quantum is over.
-
-- +5 points: allow to specify the number of coroutines via the
-  command line parameter `-n` like so:
-
-    -n <number > 0>
-
-  For example:
-
-    -n 1 # Use one coroutine for all files.
-    -n 5 # Use 5 coroutines for all files.
-
-  For the command line params parsing you have to use the standard
-  getopt() function.
-
-  Each coroutine should work as follows: if there are unsorted
-  files, then pick one and sort it, then repeat. If there are no
-  unsorted files, then the coroutine exits.
-
-  For instance, assume there are 10 files and 3 coroutines (-n 3).
-  They pick 1 file each, 7 files are waiting. One coroutine
-  finishes the sorting, picks up a next file (6 are waiting).
-  Another coroutine finishes some other file and picks up the next
-  one (5 files remaining). And so on until all files are sorted.
-  Then you do the normal merge sort. This bonus task basically
-  offers you do implement a coroutine pool.
+- +5 points: batch send/recv. To enable the corresponding tests
+  you should define the macro NEED_BATCH to 1 in corobus.h. The
+  tests must pass. Refer to corobus.h header to see what the batch
+  functions should be doing.
 
 - -5 points: (yes, minus, not plus) - you can use C++ and STL
-  containers. Including std::iostream/ostream/etc. But you still
-  can't use std::sort().
+  containers.
 
 The additional options for +5 points do not include each other.
 That is, you can do none, or do only one, or do only another, or
 both for +10. Or use C++ and get -5 to your sum.
-
-Input: names of files to sort via the command line arguments. If
-you do the bonus tasks, then you also get the target latency in
-microseconds (if you do that bonus) and the coroutine count (if
-you do that bonus).
-
-Output: total work time, work time and number of context switches
-for each individual coroutine. Keep in mind that the coroutine
-work time doesn't include its wait time, i.e. while it was
-sleeping during the coro_yield(). So you should stop coroutine
-timer before each coro_yield() and start it again right after.
-
-For testing you can create your files or generate them using
-generator.py script. An example, which should work for 15 points
-solution:
-
-$> python3 generator.py -f test1.txt -c 10000 -m 10000
-$> python3 generator.py -f test2.txt -c 10000 -m 10000
-$> python3 generator.py -f test3.txt -c 10000 -m 10000
-$> python3 generator.py -f test4.txt -c 10000 -m 10000
-$> python3 generator.py -f test5.txt -c 10000 -m 10000
-$> python3 generator.py -f test6.txt -c 100000 -m 10000
-
-$> ./main test1.txt test2.txt test3.txt test4.txt test5.txt test6.txt
-
-For checking the result you can use the script checker.py. All
-scripts assume working in python 3.

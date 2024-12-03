@@ -14,7 +14,23 @@ cp -r $RESOURCES_DIR_MOUNT/* /sysprog
 status='"ERR"'
 score=0
 
-if [ "$hw" -eq 2 ]; then
+if [ "$hw" -eq 1 ]; then
+	cp $RESOURCES_DIR_MOUNT/"$hw"/test.c /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/"$hw"/libcoro.c /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/"$hw"/libcoro.h /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/"$hw"/Makefile /sysprog/solution
+	rm -f /sysprog/solution/libcoro_test.c
+	cd /sysprog/solution
+
+	echo '🔨 Building'
+	make test_glob
+
+	echo '⏳ Running tests'
+	if ./test; then
+		status='"OK"'
+		score=$(./test --max_points)
+	fi
+elif [ "$hw" -eq 2 ]; then
 	cp $RESOURCES_DIR_MOUNT/2/checker.py /sysprog/solution
 	cp $RESOURCES_DIR_MOUNT/2/Makefile /sysprog/solution
 	cp $RESOURCES_DIR_MOUNT/2/tests.txt /sysprog/solution
