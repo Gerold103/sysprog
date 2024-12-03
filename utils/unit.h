@@ -13,9 +13,11 @@
 #define unit_fail_if(cond) do {						\
 	if (cond) {							\
 		printf("Test failed, line %d\n", __LINE__);		\
-		exit(-1);						\
+		abort();						\
 	}								\
 } while (0)
+
+#define unit_assert(cond) unit_fail_if(!(cond))
 
 #define unit_msg(...) do {						\
 	printf("# ");							\
