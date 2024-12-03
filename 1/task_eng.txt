@@ -1,8 +1,63 @@
 ------------------------------------------------------------------
-Merge sort in coroutines.
+Coroutine bus messaging system
 Language: С.
 Deadline: 2 weeks.
 ------------------------------------------------------------------
+
+coro_bus *
+coro_bus_new(void);
+
+int
+coro_bus_channel_open(coro_bus *bus, size_t size_limit);
+
+void
+coro_bus_channel_destroy(coro_bus *bus);
+
+int
+coro_bus_try_send(coro_bus *bus, int channel, unsigned data);
+
+int
+coro_bus_send(coro_bus *bus, int channel, unsigned data);
+
+int
+coro_bus_try_recv(coro_bus *bus, int channel);
+
+int
+coro_bus_recv(coro_bus *bus, int channel);
+
+
+// Bonus
+int
+coro_bus_broadcast(coro_bus *bus, unsigned data);
+
+int
+coro_bus_try_broadcast(coro_bus *bus, unsigned data);
+
+
+// Bonus
+int
+coro_bus_try_send_v(coro_bus *bus, int channel, const unsigned *data, unsigned count);
+
+int
+coro_bus_send_v(coro_bus *bus, int channel, const unsigned *data, unsigned count);
+
+int
+coro_bus_try_recv_v(coro_bus *bus, int channel, unsigned *data, unsigned capacity);
+
+int
+coro_bus_recv_v(coro_bus *bus, int channel, unsigned *data, unsigned capacity);
+
+
+
+
+
+
+
+
+
+
+
+
 
 Files are stored on the disk. They store integers in arbitrary
 order separated by whitespaces. Each file should be sorted, and
