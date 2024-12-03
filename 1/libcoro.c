@@ -1,3 +1,8 @@
+#include "libcoro.h"
+
+#include "rlist.h"
+
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -5,14 +10,27 @@
 #include <signal.h>
 #include <errno.h>
 #include <string.h>
-#include "libcoro.h"
 
-#define handle_error() ({printf("Error %s\n", strerror(errno)); exit(-1);})
+#define handle_error() do {														\
+	printf("Error %s\n", strerror(errno));										\
+	exit(-1);																	\
+} while(0)
+
+enum coro_state {
+	CORO_STATE_RUNNING,
+	CORO_STATE_SUSPENDED,
+	CORO_STATE_FINISHED,
+};
+
+struct coro_list {
+
+};
 
 /** Main coroutine structure, its context. */
 struct coro {
+	enum coro_state state;
 	/** A value, returned by func. */
-	int ret;
+	void *ret;
 	/** Stack, used by the coroutine. */
 	void *stack;
 	/** An argument for the function func. */
@@ -21,134 +39,125 @@ struct coro {
 	coro_f func;
 	/** Last remembered coroutine context. */
 	sigjmp_buf ctx;
-	/** True, if the coroutine has finished. */
-	bool is_finished;
+	struct coro *joiner;
 	long long switch_count;
 	/** Links in the coroutine list, used by scheduler. */
-	struct coro *next, *prev;
+	struct rlist link;
 };
 
-/**
- * Scheduler is a main coroutine - it catches and returns dead
- * ones to a user.
- */
-static struct coro coro_sched;
-/**
- * True, if in that moment the scheduler is waiting for a
- * coroutine finish.
- */
-static bool is_sched_waiting = false;
-/** Which coroutine works at this moment. */
-static struct coro *coro_this_ptr = NULL;
-/** List of all the coroutines. */
-static struct coro *coro_list = NULL;
-/**
- * Buffer, used by the coroutine constructor to escape from the
- * signal handler back into the constructor to rollback
- * sigaltstack etc.
- */
-static sigjmp_buf start_point;
+struct coro_engine {
+	/**
+	 * Scheduler is a main coroutine - it catches and returns dead
+	 * ones to a user.
+	 */
+	struct coro sched;
+	/** Which coroutine works at this moment. */
+	struct coro *this;
 
-/** Add a new coroutine to the beginning of the list. */
+	struct rlist coros_running_now;
+	struct rlist coros_running_next;
+
+	size_t coro_count;
+	/**
+	 * Buffer, used by the coroutine constructor to escape from the
+	 * signal handler back into the constructor to rollback
+	 * sigaltstack etc.
+	 */
+	sigjmp_buf start_point;
+};
+
 static void
-coro_list_add(struct coro *c)
+coro_engine_create(struct coro_engine *engine)
 {
-	c->next = coro_list;
-	c->prev = NULL;
-	if (coro_list != NULL)
-		coro_list->prev = c;
-	coro_list = c;
+	memset(engine, 0, sizeof(*engine));
+	rlist_create(&engine->coros_running_now);
+	rlist_create(&engine->coros_running_next);
 }
 
-/** Remove a coroutine from the list. */
 static void
-coro_list_delete(struct coro *c)
+coro_engine_resume_next(struct coro_engine *engine)
 {
-	struct coro *prev = c->prev, *next = c->next;
-	if (prev != NULL)
-		prev->next = next;
-	if (next != NULL)
-		next->prev = prev;
-	if (prev == NULL)
-		coro_list = next;
-}
+	assert(!rlist_empty(&engine->coros_running_now));
+	struct coro *to = rlist_shift_entry(&engine->coros_running_now, struct coro, link);
+	struct coro *from = engine->this;
+	assert(from != NULL);
 
-int
-coro_status(const struct coro *c)
-{
-	return c->ret;
-}
-
-long long
-coro_switch_count(const struct coro *c)
-{
-	return c->switch_count;
-}
-
-bool
-coro_is_finished(const struct coro *c)
-{
-	return c->is_finished;
-}
-
-void
-coro_delete(struct coro *c)
-{
-	free(c->stack);
-	free(c);
-}
-
-/** Switch the current coroutine to an arbitrary one. */
-static void
-coro_yield_to(struct coro *to)
-{
-	struct coro *from = coro_this_ptr;
+	engine->this = NULL;
 	++from->switch_count;
 	if (sigsetjmp(from->ctx, 0) == 0)
 		siglongjmp(to->ctx, 1);
-	coro_this_ptr = from;
+	assert(rlist_empty(&from->link));
+	assert(engine->this == NULL);
+	engine->this = from;
 }
 
-void
-coro_yield(void)
+static void
+coro_engine_suspend(struct coro_engine *engine)
 {
-	struct coro *from = coro_this_ptr;
-	struct coro *to = from->next;
-	if (to == NULL)
-		coro_yield_to(&coro_sched);
-	else
-		coro_yield_to(to);
-}
-
-void
-coro_sched_init(void)
-{
-	memset(&coro_sched, 0, sizeof(coro_sched));
-	coro_this_ptr = &coro_sched;
-}
-
-struct coro *
-coro_sched_wait(void)
-{
-	while (coro_list != NULL) {
-		for (struct coro *c = coro_list; c != NULL; c = c->next) {
-			if (c->is_finished) {
-				coro_list_delete(c);
-				return c;
-			}
-		}
-		is_sched_waiting = true;
-		coro_yield_to(coro_list);
-		is_sched_waiting = false;
+	struct coro *this = engine->this;
+	if (this == NULL) {
+		printf("Error: deadlock - suspension with no active coroutines\n");
+		exit(-1);
 	}
-	return NULL;
+	assert(this != NULL);
+	assert(rlist_empty(&this->link));
+	assert(this->state == CORO_STATE_RUNNING);
+	this->state = CORO_STATE_SUSPENDED;
+	coro_engine_resume_next(engine);
 }
 
-struct coro *
-coro_this(void)
+static void
+coro_engine_yield(struct coro_engine *engine)
 {
-	return coro_this_ptr;
+	struct coro *this = engine->this;
+	assert(rlist_empty(&this->link));
+	assert(this->state == CORO_STATE_RUNNING);
+	rlist_add_tail_entry(&engine->coros_running_next, this, link);
+	coro_engine_resume_next(engine);
 }
+
+static void
+coro_engine_wakeup(struct coro_engine *engine, struct coro *coro)
+{
+	if (coro->state == CORO_STATE_RUNNING)
+		return;
+	if (coro->state == CORO_STATE_FINISHED)
+		return;
+	assert(coro->state == CORO_STATE_SUSPENDED);
+	coro->state = CORO_STATE_RUNNING;
+	rlist_add_tail_entry(&engine->coros_running_next, coro, link);
+}
+
+static void
+coro_engine_run(struct coro_engine *engine)
+{
+	while (true) {
+		assert(rlist_empty(&engine->coros_running_now));
+		rlist_splice_tail(&engine->coros_running_now, &engine->coros_running_next);
+		if (rlist_empty(&engine->coros_running_now))
+			break;
+
+		assert(engine->this == NULL);
+		engine->this = &engine->sched;
+		rlist_add_tail_entry(&engine->coros_running_now, &engine->sched, link);
+		coro_engine_resume_next(engine);
+		assert(rlist_empty(&engine->coros_running_now));
+		assert(engine->this == &engine->sched);
+		engine->this = NULL;
+	}
+}
+
+static void
+coro_engine_destroy(struct coro_engine *engine)
+{
+	assert(engine->this == NULL);
+	assert(engine->coro_count == 0);
+	assert(rlist_empty(&engine->coros_running_now));
+	assert(rlist_empty(&engine->coros_running_next));
+	memset(engine, '#', sizeof(*engine));
+}
+
+static __thread struct coro_engine *new_coro_engine = NULL;
 
 /**
  * The core part of the coroutines creation - this signal handler
@@ -160,41 +169,43 @@ static void
 coro_body(int signum)
 {
 	(void)signum;
-	struct coro *c = coro_this_ptr;
-	coro_this_ptr = NULL;
+	struct coro_engine *my_engine = new_coro_engine;
+	new_coro_engine = NULL;
+
+	struct coro *c = my_engine->this;
+	my_engine->this = NULL;
 	/*
 	 * On an invokation jump back to the constructor right
 	 * after remembering the context.
 	 */
 	if (sigsetjmp(c->ctx, 0) == 0)
-		siglongjmp(start_point, 1);
+		siglongjmp(my_engine->start_point, 1);
 	/*
 	 * If the execution is here, then the coroutine should
-	 * finaly start work.
+	 * finally start work.
 	 */
-	coro_this_ptr = c;
+	my_engine->this = c;
 	c->ret = c->func(c->func_arg);
-	c->is_finished = true;
-	/* Can not return - 'ret' address is invalid already! */
-	if (! is_sched_waiting) {
-		printf("Critical error - no place to return!\n");
-		exit(-1);
-	}
-	siglongjmp(coro_sched.ctx, 1);
+	assert(c->state == CORO_STATE_RUNNING);
+	c->state = CORO_STATE_FINISHED;
+	if (c->joiner != NULL)
+		coro_engine_wakeup(my_engine, c->joiner);
+	coro_engine_resume_next(my_engine);
 }
 
-struct coro *
-coro_new(coro_f func, void *func_arg)
+static struct coro *
+coro_engine_spawn(struct coro_engine *engine, coro_f func, void *func_arg)
 {
-	struct coro *c = (struct coro *) malloc(sizeof(*c));
-	c->ret = 0;
+	struct coro *c = (struct coro *)malloc(sizeof(*c));
+	c->state = CORO_STATE_RUNNING;
+	c->ret = NULL;
 	int stack_size = 1024 * 1024;
 	if (stack_size < SIGSTKSZ)
 		stack_size = SIGSTKSZ;
 	c->stack = malloc(stack_size);
 	c->func = func;
 	c->func_arg = func_arg;
-	c->is_finished = false;
+	c->joiner = NULL;
 	c->switch_count = 0;
 	/*
 	 * SIGUSR2 is used. First of all, block new signals to be
@@ -223,16 +234,21 @@ coro_new(coro_f func, void *func_arg)
 	newst.ss_flags = 0;
 	if (sigaltstack(&newst, &oldst) != 0)
 		handle_error();
+
 	/* Jump onto the stack and remember its position. */
-	struct coro *old_this = coro_this_ptr;
-	coro_this_ptr = c;
+	assert(new_coro_engine == NULL);
+	new_coro_engine = engine;
+	struct coro *old_this = engine->this;
+	engine->this = c;
 	sigemptyset(&suss);
-	if (sigsetjmp(start_point, 1) == 0) {
+	if (sigsetjmp(engine->start_point, 1) == 0) {
 		raise(SIGUSR2);
-		while (coro_this_ptr != NULL)
+		while (engine->this != NULL)
 			sigsuspend(&suss);
 	}
-	coro_this_ptr = old_this;
+	assert(new_coro_engine == NULL);
+	engine->this = old_this;
+
 	/*
 	 * Return the old stack, unblock SIGUSR2. In other words,
 	 * rollback all global changes. The newly created stack
@@ -253,6 +269,83 @@ coro_new(coro_f func, void *func_arg)
 		handle_error();
 
 	/* Now scheduler can work with that coroutine. */
-	coro_list_add(c);
+	++engine->coro_count;
+	rlist_add_tail_entry(&engine->coros_running_next, c, link);
 	return c;
+}
+
+static void *
+coro_engine_join(struct coro_engine *engine, struct coro *coro)
+{
+	assert(coro->joiner == NULL);
+	coro->joiner = engine->this;
+	while (coro->state == CORO_STATE_RUNNING || coro->state == CORO_STATE_SUSPENDED)
+		coro_engine_suspend(engine);
+	assert(coro->state == CORO_STATE_FINISHED);
+	assert(coro->joiner == engine->this);
+	coro->joiner = NULL;
+	void *ret = coro->ret;
+	free(coro->stack);
+	free(coro);
+	assert(engine->coro_count > 0);
+	--engine->coro_count;
+	return ret;
+}
+
+//////////////////////////////////////////////////////////////////
+
+static struct coro_engine glob_engine;
+
+void
+coro_sched_init(void)
+{
+	coro_engine_create(&glob_engine);
+}
+
+void
+coro_sched_run(void)
+{
+	coro_engine_run(&glob_engine);
+}
+
+void
+coro_sched_destroy(void)
+{
+	coro_engine_destroy(&glob_engine);
+}
+
+struct coro *
+coro_this(void)
+{
+	return glob_engine.this;
+}
+
+struct coro *
+coro_new(coro_f func, void *func_arg)
+{
+	return coro_engine_spawn(&glob_engine, func, func_arg);
+}
+
+void *
+coro_join(struct coro *coro)
+{
+	return coro_engine_join(&glob_engine, coro);
+}
+
+void
+coro_suspend(void)
+{
+	coro_engine_suspend(&glob_engine);
+}
+
+void
+coro_yield(void)
+{
+	coro_engine_yield(&glob_engine);
+}
+
+void
+coro_wakeup(struct coro *coro)
+{
+	coro_engine_wakeup(&glob_engine, coro);
 }

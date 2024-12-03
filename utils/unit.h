@@ -17,6 +17,8 @@
 	}								\
 } while (0)
 
+#define unit_assert(cond) unit_fail_if(!(cond))
+
 #define unit_msg(...) do {						\
 	printf("# ");							\
 	printf(__VA_ARGS__);						\
