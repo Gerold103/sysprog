@@ -146,7 +146,7 @@ test_io(void)
 	fd1 = ufs_open("file", 0);
 	unit_fail_if(fd1 == -1);
 	unit_check(ufs_read(fd1, buffer, sizeof(buffer)) == 8, "read all");
-	unit_check(memcmp(buffer, "abcd5678", 4) == 0, "check all");
+	unit_check(memcmp(buffer, "abcd5678", 8) == 0, "check all");
 	ufs_close(fd1);
 	/*
 	 * Ensure the data can be anything. Not just a zero terminated string.
