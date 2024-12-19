@@ -25,17 +25,17 @@ if [ "$hw" -eq 2 ]; then
 	make test_glob
 
 	echo '⏳ Running tests'
-	if python3 checker.py --with_logic 1 --with_background 1 -e ./mybash; then
+	if output=$(python3 checker.py --with_logic 1 --with_background 1 -e ./mybash 2>&1); then
 		status='"OK"'
 		score="25"
-	elif python3 checker.py --with_logic 1 -e ./mybash; then
+	elif output=$(python3 checker.py --with_logic 1 -e ./mybash 2>&1); then
 		status='"OK"'
 		score="20"
-	elif python3 checker.py --with_background 1 -e ./mybash; then
+	elif output=$(python3 checker.py --with_background 1 -e ./mybash 2>&1); then
 		status='"OK"'
 		score="20"
-	elif python3 checker.py -e ./mybash; then
-		status='"OK'
+	elif output=$(python3 checker.py -e ./mybash 2>&1); then
+		status='"OK"'
 		score="15"
 	fi
 elif [ "$hw" -eq 3 ] || [ "$hw" -eq 4 ] || [ "$hw" -eq 5 ]; then
@@ -48,7 +48,7 @@ elif [ "$hw" -eq 3 ] || [ "$hw" -eq 4 ] || [ "$hw" -eq 5 ]; then
 	make test_glob
 
 	echo '⏳ Running tests'
-	if ./test; then
+	if output=$(./test 2>&1); then
 		status='"OK"'
 		score=$(./test --max_points)
 	fi
@@ -56,15 +56,19 @@ else
 	echo "Unknown or unsupported HW number"
 fi
 
+errors_json=$(echo "$output" | jq -R -s '.')
+
 echo '⚖️ Result:'
 if [ "$IS_LOCAL" == "1" ]; then
 	echo "Status: $status, points: $score"
+	echo $output
 else
 	result=$(cat << EOF
 {
 	"status": $status,
 	"validationQuality": $score,
-	"testingQuality": $score
+	"testingQuality": $score,
+	"errors": $errors_json
 }
 EOF
 	)
