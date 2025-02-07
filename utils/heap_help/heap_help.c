@@ -245,6 +245,29 @@ alloc_untrace(void *ptr)
 	return 0;
 }
 
+static const struct allocation *
+alloc_find(void *ptr)
+{
+	if (alloc_is_static(ptr))
+		return NULL;
+	if (depth > 1)
+		return NULL;
+	heaph_assert(is_init_done);
+	if (is_exit_done)
+		return NULL;
+	spinlock_acq(&allocs_lock);
+	struct allocation *a = allocs;
+	while (a != NULL) {
+		if (a->mem == ptr) {
+			spinlock_rel(&allocs_lock);
+			return a;
+		}
+		a = a->next;
+	}
+	spinlock_rel(&allocs_lock);
+	return NULL;
+}
+
 static void
 static_allocator_touch(void)
 {
@@ -583,10 +606,27 @@ realloc(void *ptr, size_t size)
 	++depth;
 	if (alloc_is_static(ptr))
 		ptr = NULL;
+	const struct allocation *alloc = NULL;
+	if (content_mode == CONTENT_MODE_TRASH) {
+		alloc = alloc_find(ptr);
+		// Fill with trash before shrinking the buffer. Or might become
+		// invalid later.
+		if (alloc != NULL && size < alloc->size)
+			memset((char *)ptr + size, '#', alloc->size - size);
+	}
 	void *res = default_realloc(ptr, size);
-	if (ptr == NULL && res != NULL) {
-		if (content_mode == CONTENT_MODE_TRASH)
+	if (content_mode == CONTENT_MODE_TRASH && res != NULL) {
+		// If the buffer is grown, then fill with trash the new part of
+		// it.
+		if (ptr == NULL) {
 			memset(res, '#', size);
+		} else if (alloc != NULL && size > alloc->size) {
+			memset((char *)res + alloc->size, '#',
+			       size - alloc->size);
+		}
+	}
+
+	if (ptr == NULL && res != NULL) {
 		alloc_trace_new(res, size);
 	} else if (ptr != NULL && res == NULL) {
 		alloc_untrace(ptr);
