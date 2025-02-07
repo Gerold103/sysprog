@@ -210,16 +210,16 @@ alloc_trace_new(void *ptr, size_t size)
 	spinlock_rel(&allocs_lock);
 }
 
-static void
-alloc_free(void *ptr)
+static size_t
+alloc_untrace(void *ptr)
 {
 	if (alloc_is_static(ptr))
-		return;
+		return 0;
 	if (depth > 1)
-		return;
+		return 0;
 	heaph_assert(is_init_done);
 	if (is_exit_done)
-		return;
+		return 0;
 	spinlock_acq(&allocs_lock);
 	struct allocation *a = allocs;
 	struct allocation *prev = NULL;
@@ -235,13 +235,14 @@ alloc_free(void *ptr)
 			spinlock_rel(&allocs_lock);
 
 			heaph_assert(new_count >= 0 && "freeing bad memory");
-			return;
+			return a->size;
 		}
 		prev = a;
 		a = a->next;
 	}
 	spinlock_rel(&allocs_lock);
 	heaph_assert(!"freeing bad memory");
+	return 0;
 }
 
 static void
@@ -525,7 +526,7 @@ getline(char **linep, size_t *linecapp, FILE *stream)
 	} else if (line_old != NULL && *linep == NULL) {
 		heaph_assert(false);
 	} else if (line_old != NULL && *linep != NULL && line_old != *linep) {
-		alloc_free(line_old);
+		alloc_untrace(line_old);
 		alloc_trace_new(*linep, strlen(*linep) + 1);
 	} else if (line_old != *linep) {
 		heaph_assert(false);
@@ -588,9 +589,9 @@ realloc(void *ptr, size_t size)
 			memset(res, '#', size);
 		alloc_trace_new(res, size);
 	} else if (ptr != NULL && res == NULL) {
-		alloc_free(ptr);
+		alloc_untrace(ptr);
 	} else if (ptr != NULL && res != ptr) {
-		alloc_free(ptr);
+		alloc_untrace(ptr);
 		alloc_trace_new(res, size);
 	}
 	--depth;
@@ -606,7 +607,9 @@ free(void *ptr)
 		return;
 	heaph_touch();
 	++depth;
-	alloc_free(ptr);
+	size_t size = alloc_untrace(ptr);
+	if (content_mode == CONTENT_MODE_TRASH)
+		memset(ptr, '#', size);
 	default_free(ptr);
 	--depth;
 }
@@ -632,7 +635,7 @@ freeaddrinfo(struct addrinfo *ai)
 	heaph_assert(!alloc_is_static(ai));
 	heaph_touch();
 	++depth;
-	alloc_free(ai);
+	alloc_untrace(ai);
 	default_freeaddrinfo(ai);
 	--depth;
 }
