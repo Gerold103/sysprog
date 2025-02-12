@@ -630,7 +630,7 @@ realloc(void *ptr, size_t size)
 		alloc_trace_new(res, size);
 	} else if (ptr != NULL && res == NULL) {
 		alloc_untrace(ptr);
-	} else if (ptr != NULL && res != ptr) {
+	} else {
 		alloc_untrace(ptr);
 		alloc_trace_new(res, size);
 	}
