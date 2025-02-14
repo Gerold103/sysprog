@@ -151,6 +151,28 @@ test_channel_reopen(void)
 	unit_assert(coro_bus_send(bus, c1, 789) == 0);
 	coro_bus_channel_close(bus, c2);
 
+	unit_msg("open 2 channels");
+	c1 = coro_bus_channel_open(bus, 2);
+	unit_assert(c1 >= 0);
+	c2 = coro_bus_channel_open(bus, 2);
+	unit_assert(c2 >= 0);
+	unit_msg("push some data");
+	unit_assert(coro_bus_send(bus, c1, 1) == 0);
+	unit_assert(coro_bus_send(bus, c2, 2) == 0);
+	unit_msg("close the first one");
+	coro_bus_channel_close(bus, c1);
+	unit_msg("open again");
+	c1 = coro_bus_channel_open(bus, 2);
+	unit_assert(c1 >= 0);
+	unit_msg("read all");
+	data = 0;
+	unit_assert(coro_bus_try_recv(bus, c1, &data) != 0);
+	unit_assert(coro_bus_errno() == CORO_BUS_ERR_WOULD_BLOCK);
+	unit_assert(coro_bus_try_recv(bus, c2, &data) == 0);
+	unit_assert(data == 2);
+	coro_bus_channel_close(bus, c1);
+	coro_bus_channel_close(bus, c2);
+
 	coro_bus_delete(bus);
 	unit_test_finish();
 }
