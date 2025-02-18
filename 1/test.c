@@ -146,9 +146,9 @@ test_channel_reopen(void)
 	int c2 = coro_bus_channel_open(bus, 3);
 	unit_assert(coro_bus_try_recv(bus, c2, &data) != 0);
 	unit_assert(coro_bus_errno() == CORO_BUS_ERR_WOULD_BLOCK);
-	unit_assert(coro_bus_send(bus, c1, 123) == 0);
-	unit_assert(coro_bus_send(bus, c1, 456) == 0);
-	unit_assert(coro_bus_send(bus, c1, 789) == 0);
+	unit_assert(coro_bus_send(bus, c2, 123) == 0);
+	unit_assert(coro_bus_send(bus, c2, 456) == 0);
+	unit_assert(coro_bus_send(bus, c2, 789) == 0);
 	coro_bus_channel_close(bus, c2);
 
 	unit_msg("open 2 channels");
