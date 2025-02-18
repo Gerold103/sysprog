@@ -921,22 +921,30 @@ test_broadcast_blocking(void)
 	coro_bus_channel_close(bus, c4);
 
 	unit_msg("make one channel not full, and another - full");
-	unit_assert(coro_bus_send(bus, c1, 4) == 0);
+	unit_assert(coro_bus_send(bus, c2, 4) == 0);
+	unit_assert(coro_bus_try_send(bus, c2, 5) != 0);
+	unit_assert(coro_bus_errno() == CORO_BUS_ERR_WOULD_BLOCK);
 	unsigned data = 0;
-	unit_assert(coro_bus_recv(bus, c2, &data) == 0 && data == 1);
-	unit_assert(coro_bus_recv(bus, c2, &data) == 0 && data == 2);
 	unit_assert(coro_bus_recv(bus, c3, &data) == 0 && data == 3);
 
 	unit_msg("another spurious wakeup");
 	coro_yield();
 	unit_assert(!ctx.is_done);
 
-	unit_msg("finish the broadcast");
+	unit_msg("nothing is delivered yet");
+	// Old message.
 	unit_assert(coro_bus_recv(bus, c1, &data) == 0 && data == 0);
+	// No new messages yet.
+	unit_assert(coro_bus_try_recv(bus, c1, &data) != 0);
+	unit_assert(coro_bus_errno() == CORO_BUS_ERR_WOULD_BLOCK);
+
+	unit_msg("finish the broadcast");
+	unit_assert(coro_bus_recv(bus, c2, &data) == 0 && data == 1);
+	unit_assert(coro_bus_recv(bus, c2, &data) == 0 && data == 2);
+	unit_assert(coro_bus_recv(bus, c2, &data) == 0 && data == 4);
 	unit_assert(broadcast_join(&ctx) == 0);
 
 	unit_msg("cleanup");
-	unit_assert(coro_bus_recv(bus, c1, &data) == 0 && data == 4);
 	unit_assert(coro_bus_recv(bus, c1, &data) == 0 && data == 999);
 	unit_assert(coro_bus_recv(bus, c2, &data) == 0 && data == 999);
 	unit_assert(coro_bus_recv(bus, c3, &data) == 0 && data == 999);
