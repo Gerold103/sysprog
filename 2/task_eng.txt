@@ -38,9 +38,12 @@ Rules:
 - The 'exit' command is also special, like 'cd'. Because it
   concerns the terminal itself. It needs to be implemented
   manually. But keep in mind that it should exit from the terminal
-  itself only if it is alone in the line. 'exit' - terminate the
-  shell. 'exit | echo 100' - do not terminate, execute it via
-  'exec' like any other command.
+  itself only under special condition: its output must be to the
+  shell. If it gets redirected, then it doesn't kill the shell.
+  For example, 'exit', 'exit 123 && echo test',
+  'exit 456 || echo test' - all terminate the shell. But
+  'exit | echo 100' - will not terminate. When in doubt, test the
+  behaviour with /bin/bash. Your shell must follow the same.
 
 - Your console should support tokens written without spaces when
   /bin/bash is able to parse them too. Like this:

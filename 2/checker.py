@@ -140,7 +140,7 @@ print('✅ Passed')
 
 ##########################################################################################
 # Exit code should be from the last used command.
-print('⏳ Test exit code after certain commands')
+print('⏳ Test exit code after or before certain commands')
 tests = [
 (["ls /"], 0),
 (["ls / | exit 123"], 123),
@@ -150,6 +150,10 @@ cmd = "ls /404"
 code = os.WEXITSTATUS(os.system(cmd + ' 2>/dev/null'))
 assert(code != 0)
 tests.append(([cmd], code))
+
+if args.with_logic:
+    tests.append((["exit 123 && echo test"], 123))
+    tests.append((["exit 123 || echo test"], 123))
 
 for test in tests:
     p = open_new_shell()
