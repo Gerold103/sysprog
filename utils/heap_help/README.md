@@ -18,6 +18,16 @@ There are modes which allow to get more or less info:
 
 * `./my_app` - run your app with the default heap help mode;
 
+To enable / disable backtrace collection. On some platforms it might crash, so
+try disabling the backtrace if it is failing:
+
+* `HHBACKTRACE=on` - enable backtrace collection and resolution, default.
+
+* `HHBACKTRACE=off` - disable it.
+
+The report mode can help you see how many allocations you do, and some other
+reporting details:
+
 * `HHREPORT=l ./my_app` - l = "leaks", the default mode. If there are no leaks,
   then nothing is printed at exit. Otherwise the leaks are printed to stdout
   (not all of them if there are too many) with their sizes and stack traces;

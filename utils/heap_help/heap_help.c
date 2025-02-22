@@ -35,6 +35,11 @@ enum report_mode {
 	REPORT_MODE_QUIET,
 };
 
+enum backtrace_mode {
+	BACKTRACE_ON,
+	BACKTRACE_OFF,
+};
+
 enum content_mode {
 	// Leave the resulting memory untouched like returned from the standard
 	// library.
@@ -48,6 +53,7 @@ enum content_mode {
 struct allocation {
 	void *trace[MAX_BACKTRACE_LEN];
 	int trace_size;
+	int depth;
 	void *mem;
 	size_t size;
 	struct allocation *next;
@@ -72,6 +78,7 @@ static __thread int init_lock_count = 0;
 static __thread int depth = 0;
 static enum report_mode report_mode = REPORT_MODE_LEAKS;
 static enum content_mode content_mode = CONTENT_MODE_ORIGINAL;
+static enum backtrace_mode backtrace_mode = BACKTRACE_ON;
 
 // Before the original heap functions are retrieved, there is a dummy static
 // allocator working. It is needed because on some platforms the original
@@ -196,7 +203,8 @@ alloc_trace_new(void *ptr, size_t size)
 
 	a->mem = ptr;
 	a->size = size;
-	if (depth == 1)
+	a->depth = depth;
+	if (depth == 1 && backtrace_mode == BACKTRACE_ON)
 		a->trace_size = backtrace(a->trace, MAX_BACKTRACE_LEN);
 	else
 		a->trace_size = 0;
@@ -429,7 +437,7 @@ heaph_atexit(void)
 	const char *prefix = "\n";
 	for (; a != NULL; a = a->next) {
 		heaph_assert(count > 0);
-		if (a->trace_size == 0) {
+		if (a->depth > 1) {
 			--count;
 			continue;
 		}
@@ -517,6 +525,14 @@ heaph_init(void)
 			content_mode = CONTENT_MODE_ORIGINAL;
 		else if (strcmp(hh_content, "t") == 0)
 			content_mode = CONTENT_MODE_TRASH;
+	}
+
+	const char *bt_mode = getenv("HHBACKTRACE");
+	if (bt_mode != NULL) {
+		if (strcmp(bt_mode, "on") == 0)
+			backtrace_mode = BACKTRACE_ON;
+		else if (strcmp(bt_mode, "off") == 0)
+			backtrace_mode = BACKTRACE_OFF;
 	}
 	atexit(heaph_atexit);
 }
