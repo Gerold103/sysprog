@@ -330,3 +330,10 @@ foreground work
 100
 all clean
 ----# }
+
+######## Section base
+
+----# Test { zombie check
+python3 -c "import os; print(os.getppid());" > mypid.pid
+ps -Ao state,ppid | grep -w Z | grep -f mypid.pid | cat
+----# }

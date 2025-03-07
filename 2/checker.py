@@ -62,6 +62,17 @@ def recreate_dir():
     cleanup()
     pathlib.Path(test_dir).mkdir(exist_ok=True)
 
+def print_diff(expected, got):
+    with open('output_expected.txt', 'w') as f:
+        f.write(expected)
+    with open('output_got.txt', 'w') as f:
+        f.write(got)
+    print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Diff >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+    print(subprocess.run(
+        ['diff -y output_expected.txt output_got.txt'],
+        shell=True,
+        stdout=subprocess.PIPE).stdout.decode('utf-8'))
+
 ##########################################################################################
 print('⏳ Running tests in one shell')
 recreate_dir()
@@ -83,11 +94,7 @@ if p.returncode != 0:
 if output_got != output_exp:
     print('Tests output mismatch')
     if args.verbose:
-            print('######## Expected:')
-            print(output_exp)
-            print('')
-            print('######## Got:')
-            print(output_got)
+        print_diff(output_exp, output_got)
     sys.exit(-1)
 print('✅ Passed')
 
@@ -106,11 +113,7 @@ for section in test_sections:
         if output_got != case.output:
             print('Test output mismatch for {} on line {}'.format(case.name, case.line))
             if args.verbose:
-                print('######## Expected:')
-                print(case.output)
-                print('')
-                print('######## Got:')
-                print(output_got)
+                print_diff(case.output, output_got)
             sys.exit(-1)
 print('✅ Passed')
 
