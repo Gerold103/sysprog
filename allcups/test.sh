@@ -1,15 +1,16 @@
 #!/bin/bash
 
+cp -r $RESOURCES_DIR_MOUNT/* /sysprog
+
 if [ "$IS_LOCAL" == "1" ]; then
 	hw=$HW
 	SOLUTION_MOUNT="$RESOURCES_DIR_MOUNT/$hw"
 	cp $SOLUTION_MOUNT/* /sysprog/solution
 else
-	unzip -o $SOLUTION_MOUNT -d /sysprog/solution
 	hw=$(jq -r '.hw' "$RESOURCES_DIR_MOUNT/allcups/settings.json")
+	cp /sysprog/"$hw"/* /sysprog/solution
+	unzip -o $SOLUTION_MOUNT -d /sysprog/solution
 fi
-
-cp -r $RESOURCES_DIR_MOUNT/* /sysprog
 
 status='"ERR"'
 score=0
@@ -32,9 +33,9 @@ if [ "$hw" -eq 1 ]; then
 		score=$(./test --max_points)
 	fi
 elif [ "$hw" -eq 2 ]; then
-	cp $RESOURCES_DIR_MOUNT/2/checker.py /sysprog/solution
-	cp $RESOURCES_DIR_MOUNT/2/Makefile /sysprog/solution
-	cp $RESOURCES_DIR_MOUNT/2/tests.txt /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/"$hw"/checker.py /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/"$hw"/Makefile /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/"$hw"/tests.txt /sysprog/solution
 	rm /sysprog/solution/parser_test.c
 	cd /sysprog/solution
 
