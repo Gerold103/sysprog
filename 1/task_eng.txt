@@ -1,8 +1,15 @@
 ------------------------------------------------------------------
 Coroutine messaging system
 Language: С.
-Deadline: 2 weeks.
+Deadline: 3 weeks.
+Complexity: ~10 hours on average, 500 lines of code.
 ------------------------------------------------------------------
+
+Read the whole description. It contains not only the task, but
+also hints and some educative materials, time estimations, rules,
+points out the common mistakes, and suggests bonus tasks.
+
+-------------------------- Description ---------------------------
 
 There is a messaging object called bus, like on a motherboard. The
 bus allows to open channels which can be used for sending trivial
@@ -29,10 +36,14 @@ reached, the coroutine must be suspended until there is space in
 the channel.
 
 The tests are in test.c. The implementation template is in
-corobus.h and corobus.c.
+corobus.h and corobus.c. The coroutines API is in libcoro.h. The
+other files you don't need to work with. Except for when want to
+check out the internals of the tests or of the coroutines. For
+example, libcoro_test.c just tests the coroutines engine. The task
+doesn't require to change anything in that engine. Just use the
+API.
 
-
-Rules:
+----------------------------- Rules ------------------------------
 
 - Need to strictly follow the behaviour of each function explained
   in corobus.h comments.
@@ -42,8 +53,7 @@ Rules:
 - The code should be built successfully with these compiler flags:
   `-Wextra -Werror -Wall -Wno-gnu-folding-constant`.
 
-
-Restrictions:
+-------------------------- Restrictions --------------------------
 
 - Global variables are not allowed (except for the already
   existing ones).
@@ -54,35 +64,13 @@ Restrictions:
 
 - Can not change test.c, libcoro.c, libcoro.h.
 
-
-Relaxations:
+-------------------------- Relaxations ---------------------------
 
 - You can assume, that malloc()/realloc()/calloc() never fail.
 
 - Use can use intrusive list container defined in utils/rlist.h.
 
-
-Advices:
-
-- Try to inspect the libcoro_test.c and test.c to see how the
-  coroutines are used. Try to run libcoro_test.c, add some prints,
-  use a debugger, to see how what works.
-
-- Read libcoro.h to see what kind of API you have available. See
-  what could be used in your solutions for which things.
-
-- Once you understand the libcoro coroutines, try to design your
-  solution. In your head at first, then write it down as text. Do
-  not start coding until you know what to code. Think first, code
-  second.
-
-- Implement firstly 'try_send', 'try_recv', and others 'try'. They
-  do not block the current coroutine, which makes them quite
-  trivial. Then try to implement 'send' via 'try_send', 'recv' via
-  'try_recv', and so on.
-
-
-Possible solutions:
+----------------------- Possible solutions -----------------------
 
 - 15 points: pass all the basic tests.
 
@@ -96,9 +84,73 @@ Possible solutions:
   tests must pass. Refer to corobus.h header to see what the batch
   functions should be doing.
 
-- -5 points: (yes, minus, not plus) - you can use C++ and STL
-  containers.
-
 The additional options for +5 points do not include each other.
 That is, you can do none, or do only one, or do only another, or
-both for +10. Or use C++ and get -5 to your sum.
+both for +10.
+
+--------------------------- Complexity ---------------------------
+
+How much time and effort it would take to do this task. The
+numbers might help you with planning. They are are gathered on the
+people who completed the task at least with the minimal points.
+
+- Lines of code: 350-700, average 500.
+
+- Required total time:
+  * Advanced level: ~6 hours.
+  * Average:       ~10 hours.
+  * Struggling:    ~19 hours and more.
+
+- Time distribution:
+  * Active coding: ~2-4 hours.
+  * The rest is reading the code, understanding the task and the
+      coroutines, debugging.
+
+----------------------- Advices and hints ------------------------
+
+- Try to inspect the libcoro_test.c and test.c to see how the
+  coroutines are used. Try to run libcoro_test.c, add some prints,
+  use a debugger, to see how what works.
+
+- Read libcoro.h to see what kind of API you have available. See
+  what could be used in your solutions for which things.
+
+- Try asking ChatGPT or another AI about what are the coroutines,
+  if you need more info about the whole concept of a "coroutine".
+
+- The coroutines in the task are very similar to goroutines in Go
+  language. And the "corobus" object is very similar to Go
+  channels.
+
+- Once you understand the libcoro coroutines, try to design your
+  solution. In your head at first, then write it down as text. Do
+  not start coding until you know what to code. Think first, code
+  second.
+
+- Implement firstly 'try_send', 'try_recv', and others 'try'. They
+  do not block the current coroutine, which makes them quite
+  trivial. Then try to implement 'send' via 'try_send', 'recv' via
+  'try_recv', and so on.
+
+A further note on the coroutines. If struggling to grasp what they
+are, try another angle - think of them as "resumable functions".
+
+Each coroutine has a function as its body (given in coro_new()).
+This function can call other functions and in general works like
+any other code. But this resumable function can be paused. It
+happens when you yield (call coro_yield()). And then can be
+resumed (call coro_wakeup()).
+
+For instance, one can start coroutine-1, it does some work, gets
+paused, then coroutine-2 is created and works, then is paused,
+then coroutine-1 continues work until pause, and so on.
+
+The coroutines are like objects. Literally structs. One process,
+one thread can have many of them. And you as a user of the
+coroutines can choose which of those function-objects you resume
+or pause and when.
+
+Remember, that this is all a single thread. The coroutines in this
+task are executed in turns, and are never running literally
+parallel. Concurrent, but not parallel. Mutexes or any other
+synchronization methods are not necessary here.

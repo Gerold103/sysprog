@@ -144,6 +144,9 @@ test_channel_reopen(void)
 
 	unit_msg("open and use another channel");
 	int c2 = coro_bus_channel_open(bus, 3);
+	// The channel descriptors must be reused. To avoid infinite growth of
+	// the channel array in the bus.
+	unit_assert(c1 == c2);
 	unit_assert(coro_bus_try_recv(bus, c2, &data) != 0);
 	unit_assert(coro_bus_errno() == CORO_BUS_ERR_WOULD_BLOCK);
 	unit_assert(coro_bus_send(bus, c2, 123) == 0);

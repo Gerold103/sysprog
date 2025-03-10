@@ -154,6 +154,18 @@ coro_bus_channel_open(struct coro_bus *bus, size_t size_limit)
 	(void)bus;
 	(void)size_limit;
 	coro_bus_errno_set(CORO_BUS_ERR_NOT_IMPLEMENTED);
+	/*
+	 * One of the tests will force you to reuse the channel
+	 * descriptors. It means, that if your maximal channel
+	 * descriptor is N, and you have any free descriptor in
+	 * the range 0-N, then you should open the new channel on
+	 * that old descriptor.
+	 *
+	 * A more precise instruction - check if any of the
+	 * bus->channels[i] with i = 0 -> bus->channel_count is
+	 * free (== NULL). If yes - reuse the slot. Don't grow the
+	 * bus->channels array, when have space in it.
+	 */
 	return -1;
 }
 
@@ -163,6 +175,26 @@ coro_bus_channel_close(struct coro_bus *bus, int channel)
 	/* IMPLEMENT THIS FUNCTION */
 	(void)bus;
 	(void)channel;
+	/*
+	 * Be very attentive here. What happens, if the channel is
+	 * closed while there are coroutines waiting on it? For
+	 * example, the channel was empty, and some coros were
+	 * waiting on its recv_queue.
+	 *
+	 * If you wakeup those coroutines and just delete the
+	 * channel right away, then those waiting coroutines might
+	 * on wakeup try to reference invalid memory.
+	 *
+	 * Can happen, for example, if you use an intrusive list
+	 * (rlist), delete the list itself (by deleting the
+	 * channel), and then the coroutines on wakeup would try
+	 * to remove themselves from the already destroyed list.
+	 *
+	 * Think how you could address that. Remove all the
+	 * waiters from the list before freeing it? Yield this
+	 * coroutine after waking up the waiters but before
+	 * freeing the channel, so the waiters could safely leave?
+	 */
 }
 
 int
