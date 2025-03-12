@@ -1,8 +1,15 @@
 ------------------------------------------------------------------
 Shell.
 Language: С.
-Deadline: 2 weeks.
+Deadline: 3 weeks.
+Complexity: ~15 hours on average, 350 lines of code.
 ------------------------------------------------------------------
+
+Read the whole description. It contains not only the task, but
+also hints and some educative materials, time estimations, rules,
+points out the common mistakes, and suggests bonus tasks.
+
+-------------------------- Description ---------------------------
 
 You need to implement a simplified version of a command line
 console. It should take lines like this:
@@ -12,8 +19,22 @@ console. It should take lines like this:
 and execute them by calling 'command_name' with the given
 parameters. So be a terminal, basically.
 
+The files parser.h and parser.c already implement a command parser
+for you. You are free to use the given parser or implement your
+own or take some other one.
 
-Rules:
+The file parser_test.c can be ignored. It is just used for testing
+the parser itself. You don't have to submit it, and don't need to
+look at it unless you want to just see some examples of how it
+works.
+
+The only file of interest for you is solution.c which contains the
+solution template. But you are free to add more files if needed.
+
+The behaviour of your terminate must replicate Bash to the letter.
+At least in the aspects required by the task and tests.
+
+----------------------------- Rules ------------------------------
 
 - The program should correctly handle quoted strings even if there
   are whitespaces inside it.
@@ -56,8 +77,7 @@ Rules:
 - The code should be built successfully with these compiler flags:
   `-Wextra -Werror -Wall -Wno-gnu-folding-constant`.
 
-
-Restrictions:
+-------------------------- Restrictions --------------------------
 
 - Global variables are not allowed (except for the already
   existing ones).
@@ -71,11 +91,10 @@ Restrictions:
   into the main memory.
 
 - It is forbidden to use functions like system(), popen() or use
-  any other way to access existing terminal-like ready-to-use
+  any other way to access existing shell-like ready-to-use
   functions.
 
-
-Relaxations:
+-------------------------- Relaxations ---------------------------
 
 - You don't need to support redirect of specific output streams,
   like stderr. These commands: 1>, 2>, $>, 1>>, and alike are not
@@ -86,9 +105,44 @@ Relaxations:
 
 - You don't need to support '~' nor '-' paths in 'cd' command.
 
-- You can use an already existing parser defined in parser.h and .c files, with
-  usage shown in solution.c.
+- You can use an already existing parser defined in parser.h and
+  .c files, with usage shown in solution.c.
 
+----------------------- Possible solutions -----------------------
+
+- 15 points: all described above.
+
+- +5 points: support &.
+
+- +5 points: support operators && and ||. Keep in mind that this
+  bonus is relatively hard to implement.
+
+The additional options for +5 points do not include each other.
+That is, you can do none, or do only one, or do only another, or
+both for +10.
+
+Input: commands and their arguments, input/output redirection operators.
+
+Output: the same what a real Bash prints.
+
+--------------------------- Complexity ---------------------------
+
+How much time and effort it would take to do this task. The
+numbers might help you with planning. They are are gathered on the
+people who completed the task at least with the minimal points.
+
+- Lines of code: 200-450, average 350.
+
+- Required total time:
+  * Advanced level: ~10 hours.
+  * Average:        ~15 hours.
+  * Struggling:     ~20 hours and more.
+
+- Time distribution: the coding and debugging seem to be rather
+  even. There isn't much code to write actually, but you would
+  have to debug probably a lot.
+
+------------------------- Input examples -------------------------
 
 Input examples:
 
@@ -117,41 +171,89 @@ Input examples:
     >>> print(1 + 2)
     >>> 3
 
-Possible solutions:
+----------------------- Advices and hints ------------------------
 
-  - 15 points: all described above.
+- Try to implement a simple main.c file with just one hardcoded
+  command being executed with fork() + exec...().
 
-  - +5 points: support operators && and ||.
+  Then try to extend it. For example, connect 2 hardcoded
+  commands via a single pipe, like `echo abc | grep a`. Use
+  fork() + exec...() + pipe() + dup2() to make output of one
+  command go into the input of the second one.
 
-  - +5 points: support &.
+  Once it works, try to add a third command to them:
+  `echo abc | grep a | cat`, for example. You would need 3 forks,
+  2 pipes, and a few dup2() calls. Once this works, you will see a
+  pattern, how to make it work for any number of pipes.
 
-  - -5 points: (yes, minus, not plus) - you can use C++ and STL
-  containers.
+- Before starting your solution code, get familiar with the
+  parser's API.
 
-The additional options for +5 points do not include each other.
-That is, you can do none, or do only one, or do only another, or
-both for +10. Or use C++ and get -5 to your sum.
+- In the beginning implement command execution without |, >, >>.
+  Just one command.
 
-Input: commands and their arguments, input/output redirection operators.
+- The tests in tests.txt you can edit for debugging. Or copy-paste
+  them into your interactive terminal for manual debug. Try for
+  example to check if just the first tests in tests.txt are
+  working via checker.py, by deleting the rest of them.
 
-Output: the same what a real terminal prints.
+- Add support for |, >, >>. One by one. It is better to be
+  iterative in your work. Don't try to implement everything at
+  once. Nobody does that in real production development. Features
+  are added gradually.
 
-Where to begin? The recommended implementation plan is below:
+- Try asking ChatGPT or another AI general Bash questions, pipes,
+  forks, execs. Most of the time those chat-bots can be helpful.
 
-- Get familiar with the parser API.
+- Use the actual /bin/bash for testing how something should work.
+  Note that your default terminal might be not Bash, especially
+  if you work on Mac. Better explicitly run /bin/bash binary. In
+  there run your tests that you would like to know how they work.
 
-- Implement command execution without |, >, >>. Just one command.
+- If struggling with `exit` command support and the exit codes,
+  you can check the Bash exit codes using `echo $?`. It will print
+  the exit code of the last executed command. And then you just
+  repeat that behaviour in your own terminal.
 
-- Add support for |, >, >>. To get started with pipes it might make sense to
-  try and make it work with just a single pipe at first. Can try to do that in a
-  separate source file where you would hardcode 2 commands with a pipe. For
-  example, 'echo 100' and 'grep 100'. Try to make them work via a pipe, outside
-  of the main solution. Once it works, try to make it 3 commands. Once it also
-  works, you will see the pattern and will be able to extend it to N commands.
+- When trying to pass tests, do not forget to remove or
+  comment out the debug messages. They would make your output not
+  identical to Bash, and the tests would fail.
 
-Architecture of the solution may be the following: there is a process-terminal,
-which reads user commands. On each command it does fork(). The new child
-executes the command using exec*() functions. The parent process waits for the
-child termination. For | the terminal opens a pipe, which is used to link
-input of one child and output of another. For > and >> the terminal opens a
-file, and using dup/dup2() changes standard output for a child.
+- When debugging, you would probably find it hard to do via gdb or
+  lldb, because they aren't very nice for multiprocess debugging.
+  You would have to use printf(). To simplify it you might want
+  to wrap it into a macros like `#define mylog printf`, to quickly
+  disable it via `#define mylog(...)` (thus defining the logs into
+  the void) before actual testing with checker.py.
+
+  Also some logs in child processes you probably won't see if
+  write them to STDOUT with printf(), because obviously some of
+  STDOUTs would be redirected. It might help then to write your
+  logs into some file by a hardcoded path in your solution folder.
+  So all processes would write to it their logs, and won't mess
+  their STDOUT outputs up.
+
+- Be very careful about closing the pipes correctly. Remember,
+  that if you forget to close the reading end of a pipe, then the
+  writer will eventually hang. And vice versa. Also remember, that
+  if you create a pipe(int[2]) and then call fork(), then now both
+  the parent and child have 2 descriptors, 4 in total. It is best
+  to right away close the not needed ends of the pipe in each
+  process.
+
+- Try to increase the file descriptor limit in your console if
+  getting strange errors about pipes not opening (see `ulimit -n`
+  command) (also possible that you forgot to close the unused ends
+  of your pipes somewhere).
+
+Architecture of the solution may be the following: there is a
+process-terminal, which reads user commands. On each command it
+does fork(). The new child executes the command using exec*()
+functions. The parent process waits for the child termination.
+
+For each | the terminal opens a pipe, which is used to link input
+of one child and output of another.
+
+For > and >> the terminal opens a file, and using dup/dup2()
+changes standard output for the child, so it will write to that
+file.
