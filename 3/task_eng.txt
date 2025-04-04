@@ -1,8 +1,15 @@
 ------------------------------------------------------------------
 File system.
 Language: C.
-Deadline: 2 weeks.
+Deadline: 3 weeks.
+Complexity: ~7 hours on average, 520 lines of code.
 ------------------------------------------------------------------
+
+Read the whole description. It contains not only the task, but
+also hints and some educative materials, time estimations, rules,
+points out the common mistakes, and suggests bonus tasks.
+
+-------------------------- Description ---------------------------
 
 Need to implement own file system in memory. Don't be afraid, it
 is not too complex. For start you are given a template of the FS
@@ -24,17 +31,19 @@ userfs.h.
 The task is to implement this API in the way how it is explained
 in the comments in userfs.h.
 
-
-Rules:
+----------------------------- Rules ------------------------------
 
 - Need to strictly follow the behaviour of each function explained
   in userfs.h comments.
 
-
-Restrictions:
+-------------------------- Restrictions --------------------------
 
 - userfs.h can not be changed except for enabling the bonus
   tasks, see them below.
+
+- It is not allowed to copy the source and target buffers in
+  ufs_read/write() byte by byte. You must use memcpy() to fill the
+  blocks up and to read them, multiple bytes at once.
 
 - The tests can not be changed.
 
@@ -45,14 +54,12 @@ Restrictions:
   utils/heap_help tool. Showing zero leak reports from Valgrind or
   ASAN is not enough - they often miss the leaks.
 
-
-Relaxations:
+-------------------------- Relaxations ---------------------------
 
 - Can assume that all the data fits into the main memory and
   memory allocation functions (like malloc()) never fail.
 
-
-Possible solutions:
+----------------------- Possible solutions -----------------------
 
 - 15 points: implement all functions from userfs.h.
 
@@ -64,15 +71,38 @@ Possible solutions:
 
 - +5 points: implement file resize. See NEED_RESIZE in userfs.h.
 
-- -5 points: (yes, minus, not plus) - you can use C++ and STL
-  containers.
-
 The additional options for +5 points do not include each other.
 That is, you can do none, or do only one, or do only another, or
-both for +10. Or use C++ and get -5 to your sum.
+both for +10.
 
+--------------------------- Complexity ---------------------------
 
-Advices:
+How much time and effort it would take to do this task. The
+numbers might help you with planning. They are are gathered on the
+people who completed the task at least with the minimal points.
+
+- Lines of code: 330-640, average 520.
+
+- Required total time:
+  * Advanced level: ~4 hours.
+  * Average:        ~7 hours.
+  * Struggling:    ~10 hours and more.
+
+- Time distribution: the coding and debugging seem to be rather
+  even. The task is reported to be easy to understand and to code,
+  the debugging is relatively simple.
+
+----------------------- Advices and hints ------------------------
+
+- When running the tests with heap_help, be aware that some tests
+  will run very long. To bypass that you can temporary increase
+  the BLOCK_SIZE of your files to something like 4096. It will
+  speed the tests up a lot and you can then check the leaks.
+
+  But the default block size must work fine without heap_help.
+
+- Below are a few examples and suggestions on your possible
+  implementation strategy.
 
 Your main tasks are - 1) implement file growth when new data is
 being written, 2) implement a file descriptor. Lets inspect a
