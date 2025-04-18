@@ -106,6 +106,44 @@ people who completed the task at least with the minimal points.
   * The rest is reading the code, understanding the task and the
       coroutines, debugging.
 
+--------------------------- How to run ---------------------------
+
+The task uses CMake for compilation. Here is how you could use it.
+
+- Go into the task's folder, so your path is <...>/sysprog/1/.
+- Create a build folder and go there:
+    mkdir build
+    cd build
+- Configure the project:
+    cmake ..
+- Compile it:
+    make
+- Now you can run the tests via:
+    ./test
+
+CMake offers you a few options. Each option, like SOME_OPTION, you
+can set to a certain value using the following syntax:
+    cmake -DSOME_OPTION=value ..
+
+The options available for this task are:
+
+- ENABLE_LEAK_CHECKS - build with heap_help utility to check if
+    you have any leaks or heap misusages.
+  - 0 = disable. Default.
+  - 1 = enable
+
+- ENABLE_GLOB_SEARCH - build all the C and C++ source files in the
+    folder. It is mostly needed when you have created more files
+    for yourself and don't watch to list them all individually.
+  - 0 = disable. Default.
+  - 1 = enable
+
+- CMAKE_BUILD_TYPE.
+  - Release = enable compiler optimizations. Faster, but not much
+      possible to debug interactively.
+  - Debug = disable compiler optimizations. Slower, but good for
+      interactive debugging.
+
 ----------------------- Advices and hints ------------------------
 
 - Try to inspect the libcoro_test.c and test.c to see how the
