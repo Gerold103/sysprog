@@ -7,3 +7,5 @@
 - Cheating nullifies the question on which it happens.
 - I can ask about arbitrary follow-up details for each question.
 - If after the exam your total point count for the whole course is still less than minimal, but the exam was passed, then your course mark is lifted to the minimal passing value.
+- The exam is mandatory for everyone who has not reached 100 points or above. For those who did perform >= 100, the exam is just an optional opportunity to gain even more points.
+- If the exam is not passed (points < 8), then it must be retaken. Even if the points gained during the course are higher than the passing threshold.
