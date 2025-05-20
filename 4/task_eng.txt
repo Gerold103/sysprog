@@ -1,8 +1,15 @@
 ------------------------------------------------------------------
 Thread pool.
 Language: C.
-Deadline: 2 weeks.
+Deadline: 3 weeks.
+Complexity: ~10 hours on average, 330 lines of code.
 ------------------------------------------------------------------
+
+Read the whole description. It contains not only the task, but
+also hints and some educative materials, time estimations, rules,
+points out the common mistakes, and suggests bonus tasks.
+
+-------------------------- Description ---------------------------
 
 Need to implement a thread pool. In various programs executing
 many independent and easily parallelized tasks it is often quite
@@ -24,7 +31,7 @@ solution: in Qt it is QThreadPool class, in .NET it is ThreadPool
 class, in boost it is thread_pool class. In the task you have to
 implement an own similar pool.
 
-In the files thread_pool.h and thread_pool.c you can fine
+In the files thread_pool.h and thread_pool.c you can find
 templates of functions and structures which need to be
 implemented.
 
@@ -46,8 +53,7 @@ this:
 
         gcc thread_pool.c main.c
 
-
-Rules:
+----------------------------- Rules ------------------------------
 
 - thread_pool at creation via thread_pool_new() shouldn't start
   all max number of threads at once. The threads have to be
@@ -60,8 +66,7 @@ Rules:
 - The other rules can be read in the documentation in
   thread_pool.h and deducted from the tests.
 
-
-Restrictions:
+-------------------------- Restrictions --------------------------
 
 - Global variables are not allowed (except for the already
   existing ones).
@@ -75,14 +80,12 @@ Restrictions:
   just do 'while (!task->is_finished) {usleep(1)};'. For waiting
   on anything you need to use pthread_cond_t.
 
-
-Relaxations:
+-------------------------- Relaxations ---------------------------
 
 - There is no limit on the number of mutexes and condvars. You
   can even store them in each task.
 
-
-Possible solutions:
+----------------------- Possible solutions -----------------------
 
 - 15 points: implement all functions from thread_pool.h, which are
   not hidden inside macros.
@@ -95,9 +98,70 @@ Possible solutions:
   is in thread_pool.h. You need to define the macro
   NEED_TIMED_JOIN to 1 then.
 
-- -5 points: (yes, minus, not plus) - you can use C++, STL
-  containers, std::thread, std::mutex, etc.
-
 The additional options for +5 points do not include each other.
 That is, you can do none, or do only one, or do only another, or
-both for +10. Or use C++ and get -5 to your sum.
+both for +10.
+
+--------------------------- Complexity ---------------------------
+
+How much time and effort it would take to do this task. The
+numbers might help you with planning. They are are gathered on the
+people who completed the task at least with the minimal points.
+
+- Lines of code: 250-400, average 330.
+
+- Required total time:
+  * Advanced level: ~6 hours.
+  * Average:       ~10 hours.
+  * Struggling:    ~19 hours and more.
+
+- Time distribution:
+  * Active coding: ~2-4 hours.
+  * The rest is mostly debugging. It can be tricky in
+      multithreaded environment.
+
+----------------------- Advices and hints ------------------------
+
+- Try to ask ChatGPT or another AI about some theory if you are
+  struggling with the basic concepts.
+
+- It is vital that you understand the following: what is a thread,
+  what is a mutex, and what is a condition variable.
+
+  Thread is basically an executor. Something that can run code.
+  When you have multiple threads, they can run the same or
+  different code literally in parallel, on multiple physical CPU
+  cores.
+
+  Mutex is a way to protect some data from being accessed by
+  multiple threads at once. It is needed when you need to update
+  or read some untrivial state (multiple variables at once or do
+  multiple actions with one variable like an increment) and it
+  can't be done in a single machine instruction. Then you do
+  mutex-lock, do the work, and mutex-unlock. Between the lock and
+  unlock only one thread will be able to work.
+
+  Condition variable is a way to block a thread so it could wait
+  for a certain "event" or a "condition". Hence the name -
+  "condition variable". How it works is that one thread takes a
+  mutex-lock, checks a certain condition, sees that it is not
+  satisfied, and waits on that condition. Another thread will
+  eventually take the mutex-lock and "signal" this condition.
+  This will make the first thread wakeup. And then it can
+  double-check that the condition is indeed satisfied. You can try
+  to search some examples in the Internet to see specific
+  usecases.
+
+- When making the detach-bonus, pay special attention to the case
+  what happens when one thread calls detach and at the same time
+  the task is finished in the worker. It is quite easy to make a
+  memory leak or a use-after-free here. You need to make sure that
+  if detach is called, then either the task is already finished
+  and gets deleted, or it will be deleted automatically when it is
+  finished.
+
+- When heap_help is enabled, the tests might run for a relatively
+  long time. For the sake of faster debugging you might want to
+  reduce the TPOOL_MAX_TASKS constant. Just make sure it is
+  reverted back to its original value before you submit the final
+  solution.
