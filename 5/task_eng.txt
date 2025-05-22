@@ -1,8 +1,15 @@
 ------------------------------------------------------------------
 Game lobby chat.
 Language: C.
-Deadline: 2 weeks.
+Deadline: 3 weeks.
+Complexity: ~15 hours on average, 1100 lines of code.
 ------------------------------------------------------------------
+
+Read the whole description. It contains not only the task, but
+also hints and some educative materials, time estimations, rules,
+points out the common mistakes, and suggests bonus tasks.
+
+-------------------------- Description ---------------------------
 
 Need to implement a game lobby chat. It consists of a chat server
 and a client.
@@ -23,8 +30,7 @@ $> ./server             $> ./client             $> ./client
 I am client-1!          I am client-1!          I am client-1!
 I am client-2!          I am client-2!          I am client-2!
 
-
-Rules:
+----------------------------- Rules ------------------------------
 
 - Message end is `\n` (line wrap). Note, that '\n' is not a part
   of the message. It is just a delimiter. I.e. if feed('msg\n') is
@@ -43,8 +49,7 @@ Rules:
   sides. For example, if I type "  m s   g   " in a terminal and
   press enter, the message to be sent should be "m s   g".
 
-
-Restrictions:
+-------------------------- Restrictions --------------------------
 
 - Global variables are not allowed (except for the already
   existing ones).
@@ -60,7 +65,10 @@ Restrictions:
 - Function select() is forbidden (it is outdated, broken by design
   and is just bad practice - never use it).
 
-- All sockets should be created in non-blocking mode (O_NONBLOCK).
+- All sockets should be working in non-blocking mode (O_NONBLOCK).
+  On the client-side though it is allowed to make a socket
+  non-blocking after connect(). So the connect() is allowed to be
+  blocking.
 
 - No busy-loops of any sort anywhere.
 
@@ -70,25 +78,31 @@ Restrictions:
 - The API in the headers can not be changed (unless you spot a
   mistake there - then tell me).
 
-- You can use libev if you feel it will be easier than direct
-  usage of epoll/kqueue (but honestly it is unlikely).
-
 - In epoll you have to use epoll_event.data.ptr and in kqueue -
   kevent.udata. Note, usage of epoll_event.data.fd is not allowed.
   The ptr/udata must be used for matching events to their sockets
   after return from epoll_wait() and kevent().
 
 - When epoll is used, you have to read about EPOLLET and use it.
-  Usage of EPOLL_CTL_MOD is not allowed.
+  Usage of EPOLL_CTL_MOD is not allowed. Usage of
+  EPOLL_CTL_ADD/DEL to simulate MOD is also not allowed. A socket
+  must be added to epoll once when created, and deleted before
+  being closed.
 
-- When kqueue is used, you have to use EV_CLEAR.
+- When kqueue is used, you have to use EV_CLEAR. All the same
+  restrictions apply same as with epoll. That is, you can't add
+  and delete the events. You must add socket once and leave it
+  in kqueue until it is closed.
+
+- On server side you must use epoll or kqueue.
+
+- On the client side you must use poll() (not epoll).
 
 - The attached makefile should keep working and compilation should
   have zero warnings/errors. Alternatively you can try to use
   cmake, but then need to keep all the same compiler options.
 
-
-Relaxations:
+-------------------------- Relaxations ---------------------------
 
 - Can assume message queues are always small enough to fit into
   the memory.
@@ -109,30 +123,7 @@ Relaxations:
 - You can assume the client and server operate only on IPv4
   addresses.
 
-
-Advices:
-
-- Start with a design of what you want to do. For example, you
-  need to think how to push data into the sockets - write()/send()
-  can send not all given data at once. Like write(100) can easily
-  write just 60 bytes. It means data for sending must be saved
-  into some buffer from which it will be sent in portions when the
-  socket is writable. You have to copy data for sending, and track
-  how much of it was sent.
-
-- Choose what you will use in the server - epoll, poll, or kqueue.
-  I highly recommend epoll/kqueue but you can use any of these 3
-  methods (note, kqueue is only available on Mac/FreeBSD and epoll
-  is only available on Linux).
-
-- You might want to start with the client. It is easier than the
-  server.
-
-- If you feel confident with the basics, you might want to right
-  away try to support client names (see a bonus point below).
-
-
-Possible solutions:
+----------------------- Possible solutions -----------------------
 
 - 15 points: implement all functions from all .h and .c files,
   like described above and in the files (except optional ones,
@@ -146,6 +137,9 @@ Possible solutions:
   For this bonus to be accepted the clients should send their name
   to the server only once.
 
+  This bonus is better be planned to have in advance. Otherwise
+  you would have to change a lot of code after the base is done.
+
 - +5 points: implement server's messages - the function
   chat_server_feed(). It is already defined in chat_server.h and
   .c files. If doing this, you need to define the macro
@@ -154,9 +148,97 @@ Possible solutions:
   Server messages are broadcast to all clients. If you did the
   client names bonus, then server name should be 'server'.
 
-- -5 points: (yes, minus, not plus) - you can use C++ and STL
-  containers.
-
 The additional options for +5 points do not include each other.
 That is, you can do none, or do only one, or do only another, or
-both for +10. Or use C++ and get -5 to your sum.
+both for +10.
+
+--------------------------- Complexity ---------------------------
+
+How much time and effort it would take to do this task. The
+numbers might help you with planning. They are are gathered on the
+people who completed the task at least with the minimal points.
+
+- Lines of code: 1000-1200, average 1100.
+
+- Required total time:
+  * Advanced level: ~6 hours.
+  * Average:       ~15 hours.
+  * Struggling:    ~20 hours and more.
+
+- Time distribution:
+  * Active coding: ~6 hours.
+  * The rest is reading the code, understanding the task, reading
+      the documentation on the descriptor multiplexing methods
+      like epoll/kqueue.
+
+----------------------- Advices and hints ------------------------
+
+- Start with a design of what you want to do. For example, you
+  need to think how to push data into the sockets - write()/send()
+  can send not all given data at once. Like write(100) can easily
+  write just 60 bytes. It means data for sending must be saved
+  into some buffer from which it will be sent in portions when the
+  socket is writable. You have to copy data for sending, and track
+  how much of it was sent.
+
+- See what you will use in the server - epoll or kqueue. If you
+  have Linux, then it is will be epoll. If Mac, then you might
+  use kqueue natively, or use epoll in a Linux VM or in a Docker
+  container.
+
+- You might want to start with the client. It is easier than the
+  server.
+
+- If you feel confident with the basics, you might want to right
+  away try to support client names.
+
+- It is highly recommended to investigate how EPOLLET works when
+  you are going to use epoll, and EV_CLEAR when using kqueue. The
+  idea is the same for both but can be easier explained on the
+  epoll case, because the name is more matching. EPOLLET stands
+  for "edge-triggered" mode. While the default mode is
+  "level-triggered".
+
+  The difference is the following. The level-triggered epoll works
+  quite trivial. If a user listens for EPOLLIN and a socket is
+  readable, then epoll_wait() will return that socket while it
+  remains readable. Same with EPOLLOUT - the socket will be
+  returned from epoll_wait() all the time, as long as it is
+  writable.
+
+  And this is problematic. While reading is usually needed all the
+  time, writing is not. Because not always the application has
+  something to write. And yet, epoll_wait() will all the time
+  return this socket even when the app has no data for sending.
+
+  This is why "level-triggered" mode is called like this - event
+  is triggered when the socket is at the "level" of being
+  readable or writable. It depends on the socket's current state
+  and nothing else.
+
+  "Edge-triggered" mode is different. It only reacts (creates an
+  "event") when the socket changes its state. So it tracks not the
+  state itself, but its changes.
+
+  And this is how it gets reflected - when a socket **wasn't**
+  writable and **becomes** writable, then EPOLLOUT event is
+  delivered from epoll_wait(). But if the socket was already
+  writable before epoll_wait(), then it won't be returned from it.
+  Same with reading and with EPOLLIN.
+
+  The transition to **not having a state** happens when you tried
+  to consume the state (you did send() for writing and recv() for
+  reading) and got EWOULDBLOCK error. Then when the state
+  **appears**, you will get an event about it.
+
+  So with EPOLLET just always make sure that you do try to
+  write()/send() when you didn't get any EWOULDBLOCK since the
+  last epoll_wait() call. If it is not writable and you get
+  EWOULDBLOCK, you will be notified when it becomes such by
+  EPOLLOUT.
+
+  For EPOLLIN the logic is the same, but usually it is easier,
+  because you always want this event. It is very rare when an app
+  doesn't want to read a socket.
+
+  With kqueue all the same applies when EV_CLEAR is used.
