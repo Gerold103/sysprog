@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 project(CoroBus C CXX)
 
+set(CMAKE_CXX_STANDARD 17)
 set(COMMON_FLAGS
     -Wextra
     -Werror
@@ -24,7 +25,7 @@ set(UTILS_SOURCES ${UTILS_DIR}/unit.c)
 include_directories(${UTILS_DIR})
 
 if(ENABLE_LEAK_CHECKS)
-    list(APPEND UTILS_SOURCES ${UTILS_DIR}/heap_help/heap_help.c)
+    list(APPEND UTILS_SOURCES ${UTILS_DIR}/heap_help/heap_help.cpp)
     include_directories(${UTILS_DIR}/heap_help)
 endif()
 
