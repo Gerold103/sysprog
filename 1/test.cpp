@@ -21,7 +21,7 @@ struct ctx_send {
 static void *
 send_f(void *arg)
 {
-	struct ctx_send *ctx = arg;
+	struct ctx_send *ctx = (struct ctx_send *)arg;
 	ctx->is_started = true;
 	ctx->rc = coro_bus_send(ctx->bus, ctx->channel, ctx->data);
 	ctx->err = coro_bus_errno();
@@ -68,7 +68,7 @@ struct ctx_recv {
 static void *
 recv_f(void *arg)
 {
-	struct ctx_recv *ctx = arg;
+	struct ctx_recv *ctx = (struct ctx_recv *)arg;
 	ctx->is_started = true;
 	ctx->rc = coro_bus_recv(ctx->bus, ctx->channel, ctx->data);
 	ctx->err = coro_bus_errno();
@@ -556,7 +556,7 @@ struct ctx_stress_send {
 static void *
 stress_send_f(void *arg)
 {
-	struct ctx_stress_send *ctx = arg;
+	struct ctx_stress_send *ctx = (struct ctx_stress_send *)arg;
 	while (ctx->next_data < ctx->last_data) {
 		unit_assert(coro_bus_send(ctx->bus, ctx->channel,
 			ctx->next_data++) == 0);
@@ -575,7 +575,7 @@ struct ctx_stress_recv {
 static void *
 stress_recv_f(void *arg)
 {
-	struct ctx_stress_recv *ctx = arg;
+	struct ctx_stress_recv *ctx = (struct ctx_stress_recv *)arg;
 	while (ctx->size < ctx->capacity) {
 		unit_assert(coro_bus_recv(ctx->bus, ctx->channel,
 			&ctx->datas[ctx->size++]) == 0);
@@ -592,7 +592,7 @@ struct ctx_stress_send_recv {
 static void *
 stress_send_recv_f(void *arg)
 {
-	struct ctx_stress_send_recv *ctx = arg;
+	struct ctx_stress_send_recv *ctx = (struct ctx_stress_send_recv *)arg;
 
 	const unsigned limit = 10;
 	const unsigned data_count = 1234;

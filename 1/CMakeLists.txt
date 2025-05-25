@@ -31,8 +31,8 @@ endif()
 if(NOT ENABLE_GLOB_SEARCH)
     set(TEST_SOURCES
         libcoro.c
-        corobus.c
-        test.c
+        corobus.cpp
+        test.cpp
         ${UTILS_SOURCES}
     )
     add_executable(test ${TEST_SOURCES})

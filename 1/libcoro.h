@@ -2,6 +2,10 @@
 
 #include <stdbool.h>
 
+#if defined(__cplusplus)
+extern "C" {
+#endif /* defined(__cplusplus) */
+
 struct coro;
 typedef void *(*coro_f)(void *);
 
@@ -69,3 +73,7 @@ coro_yield(void);
  */
 void
 coro_wakeup(struct coro *coro);
+
+#if defined(__cplusplus)
+} /* extern "C" */
+#endif /* defined(__cplusplus) */
