@@ -5,12 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct parser {
-	char *buffer;
-	uint32_t size;
-	uint32_t capacity;
-};
-
+namespace
+{
 enum token_type {
 	TOKEN_TYPE_NONE,
 	TOKEN_TYPE_STR,
@@ -24,127 +20,45 @@ enum token_type {
 };
 
 struct token {
-	enum token_type type;
-	char *data;
-	uint32_t size;
-	uint32_t capacity;
+	char *
+	strdup() const
+	{
+		size_t len = data.size();
+		char *res = new char[len + 1];
+		memcpy(res, data.data(), len);
+		res[len] = 0;
+		return res;
+	}
+
+	token_type type = TOKEN_TYPE_NONE;
+	std::string data;
 };
-
-static char *
-token_strdup(const struct token *t)
-{
-	assert(t->type == TOKEN_TYPE_STR);
-	assert(t->size > 0);
-	char *res = malloc(t->size + 1);
-	memcpy(res, t->data, t->size);
-	res[t->size] = 0;
-	return res;
 }
 
-static void
-token_append(struct token *t, char c)
+command::~command()
 {
-	if (t->size == t->capacity) {
-		t->capacity = (t->capacity + 1) * 2;
-		t->data = realloc(t->data, sizeof(*t->data) * t->capacity);
-	} else {
-		assert(t->size < t->capacity);
-	}
-	t->data[t->size++] = c;
-}
-
-static void
-token_reset(struct token *t)
-{
-	t->size = 0;
-	t->type = TOKEN_TYPE_NONE;
-}
-
-static void
-command_append_arg(struct command *cmd, char *arg)
-{
-	if (cmd->arg_count == cmd->arg_capacity) {
-		cmd->arg_capacity = (cmd->arg_capacity + 1) * 2;
-		cmd->args = realloc(cmd->args, sizeof(*cmd->args) * cmd->arg_capacity);
-	} else {
-		assert(cmd->arg_count < cmd->arg_capacity);
-	}
-	cmd->args[cmd->arg_count++] = arg;
+	for (char *arg : args)
+		delete[] arg;
 }
 
 void
-command_line_delete(struct command_line *line)
+parser::feed(const char *str, uint32_t len)
 {
-	while (line->head != NULL) {
-		struct expr *e = line->head;
-		if (e->type == EXPR_TYPE_COMMAND) {
-			struct command *cmd = &e->cmd;
-			free(cmd->exe);
-			for (uint32_t i = 0; i < cmd->arg_count; ++i)
-				free(cmd->args[i]);
-			free(cmd->args);
-		}
-		line->head = e->next;
-		free(e);
-	}
-	free(line->out_file);
-	free(line);
-}
-
-static void
-command_line_append(struct command_line *line, struct expr *e)
-{
-	if (line->head == NULL)
-		line->head = e;
-	else
-		line->tail->next = e;
-	line->tail = e;
-}
-
-struct parser *
-parser_new(void)
-{
-	return calloc(1, sizeof(struct parser));
-}
-
-void
-parser_feed(struct parser *p, const char *str, uint32_t len)
-{
-	uint32_t cap = p->capacity - p->size;
-	if (cap < len) {
-		uint32_t new_capacity = (p->capacity + 1) * 2;
-		if (new_capacity - p->size < len)
-			new_capacity = p->size + len;
-		p->buffer = realloc(p->buffer, sizeof(*p->buffer) * new_capacity);
-		p->capacity = new_capacity;
-	}
-	memcpy(p->buffer + p->size, str, len);
-	p->size += len;
-	assert(p->size <= p->capacity);
-}
-
-static void
-parser_consume(struct parser *p, uint32_t size)
-{
-	assert(p->size >= size);
-	if (size == p->size) {
-		p->size = 0;
-		return;
-	}
-	memmove(p->buffer, p->buffer + size, p->size - size);
-	p->size -= size;
+	m_buffer.append(str, len);
 }
 
 static uint32_t
-parse_token(const char *pos, const char *end, struct token *out)
+parse_token(const char *pos, const char *end, token &out)
 {
-	token_reset(out);
+	out.type = TOKEN_TYPE_NONE;
+	out.data.resize(0);
+
 	const char *begin = pos;
 	while (pos < end) {
 		if (!isspace(*pos))
 			break;
 		if (*pos == '\n') {
-			out->type = TOKEN_TYPE_NEW_LINE;
+			out.type = TOKEN_TYPE_NEW_LINE;
 			return pos + 1 - begin;
 		}
 		++pos;
@@ -164,7 +78,7 @@ parse_token(const char *pos, const char *end, struct token *out)
 			}
 			if (quote != c)
 				goto append_and_next;
-			out->type = TOKEN_TYPE_STR;
+			out.type = TOKEN_TYPE_STR;
 			return pos + 1 - begin;
 		case '\\':
 			if (quote == '\'')
@@ -186,7 +100,7 @@ parse_token(const char *pos, const char *end, struct token *out)
 				default:
 					break;
 				}
-				token_append(out, '\\');
+				out.data.push_back('\\');
 				goto append_and_next;
 			}
 			assert(quote == 0);
@@ -204,8 +118,8 @@ parse_token(const char *pos, const char *end, struct token *out)
 		case '>':
 			if (quote != 0)
 				goto append_and_next;
-			if (out->size > 0) {
-				out->type = TOKEN_TYPE_STR;
+			if (!out.data.empty()) {
+				out.type = TOKEN_TYPE_STR;
 				return pos - begin;
 			}
 			++pos;
@@ -214,13 +128,13 @@ parse_token(const char *pos, const char *end, struct token *out)
 			if (*pos == c) {
 				switch(c) {
 				case '&':
-					out->type = TOKEN_TYPE_AND;
+					out.type = TOKEN_TYPE_AND;
 					break;
 				case '|':
-					out->type = TOKEN_TYPE_OR;
+					out.type = TOKEN_TYPE_OR;
 					break;
 				case '>':
-					out->type = TOKEN_TYPE_OUT_APPEND;
+					out.type = TOKEN_TYPE_OUT_APPEND;
 					break;
 				default:
 					assert(false);
@@ -230,13 +144,13 @@ parse_token(const char *pos, const char *end, struct token *out)
 			} else {
 				switch(c) {
 				case '&':
-					out->type = TOKEN_TYPE_BACKGROUND;
+					out.type = TOKEN_TYPE_BACKGROUND;
 					break;
 				case '|':
-					out->type = TOKEN_TYPE_PIPE;
+					out.type = TOKEN_TYPE_PIPE;
 					break;
 				case '>':
-					out->type = TOKEN_TYPE_OUT_NEW;
+					out.type = TOKEN_TYPE_OUT_NEW;
 					break;
 				default:
 					assert(false);
@@ -249,26 +163,26 @@ parse_token(const char *pos, const char *end, struct token *out)
 		case '\r':
 			if (quote != 0)
 				goto append_and_next;
-			assert(out->size > 0);
-			out->type = TOKEN_TYPE_STR;
+			assert(!out.data.empty());
+			out.type = TOKEN_TYPE_STR;
 			return pos + 1 - begin;
 		case '\n':
 			if (quote != 0)
 				goto append_and_next;
-			assert(out->size > 0);
-			out->type = TOKEN_TYPE_STR;
+			assert(!out.data.empty());
+			out.type = TOKEN_TYPE_STR;
 			return pos - begin;
 		case '#':
 			if (quote != 0)
 				goto append_and_next;
-			if (out->size > 0) {
-				out->type = TOKEN_TYPE_STR;
+			if (!out.data.empty()) {
+				out.type = TOKEN_TYPE_STR;
 				return pos - begin;
 			}
 			++pos;
 			while (pos < end) {
 				if (*pos == '\n') {
-					out->type = TOKEN_TYPE_NEW_LINE;
+					out.type = TOKEN_TYPE_NEW_LINE;
 					return pos + 1 - begin;
 				}
 				++pos;
@@ -278,83 +192,88 @@ parse_token(const char *pos, const char *end, struct token *out)
 			goto append_and_next;
 		}
 	append_and_next:
-		token_append(out, c);
+		out.data.push_back(c);
 		++pos;
 	}
 	return 0;
 }
 
-enum parser_error
-parser_pop_next(struct parser *p, struct command_line **out)
+parser_error
+parser::pop_next(command_line *&out)
 {
-	struct command_line *line = calloc(1, sizeof(*line));
-	char *pos = p->buffer;
+	command_line *line = new command_line();
+	char *pos = m_buffer.data();
 	const char *begin = pos;
-	char *end = pos + p->size;
-	struct token token = {0};
-	enum parser_error res = PARSER_ERR_NONE;
+	char *end = pos + m_buffer.size();
+	token tok;
+	parser_error res = PARSER_ERR_NONE;
 
 	while (pos < end) {
-		uint32_t used = parse_token(pos, end, &token);
+		uint32_t used = parse_token(pos, end, tok);
 		if (used == 0)
 			goto return_no_line;
 		pos += used;
-		struct expr *e;
-		switch(token.type) {
-		case TOKEN_TYPE_STR:
-			if (line->tail != NULL && line->tail->type == EXPR_TYPE_COMMAND) {
-				command_append_arg(&line->tail->cmd, token_strdup(&token));
+		switch(tok.type) {
+		case TOKEN_TYPE_STR: {
+			if (!line->exprs.empty() &&
+			    line->exprs.back().type == EXPR_TYPE_COMMAND) {
+				line->exprs.back().cmd.args.push_back(tok.strdup());
 				continue;
 			}
-			e = calloc(1, sizeof(*e));
-			e->type = EXPR_TYPE_COMMAND;
-			e->cmd.exe = token_strdup(&token);
-			command_line_append(line, e);
+			expr e;
+			e.type = EXPR_TYPE_COMMAND;
+			e.cmd.exe = std::move(tok.data);
+			line->exprs.push_back(std::move(e));
 			continue;
-		case TOKEN_TYPE_NEW_LINE:
-			/* Skip new lines. */
-			if (line->tail == NULL)
+		}
+		case TOKEN_TYPE_NEW_LINE: {
+			// Skip new lines.
+			if (line->exprs.empty())
 				continue;
 			goto close_and_return;
-		case TOKEN_TYPE_PIPE:
-			if (line->tail == NULL) {
+		}
+		case TOKEN_TYPE_PIPE: {
+			if (line->exprs.empty()) {
 				res = PARSER_ERR_PIPE_WITH_NO_LEFT_ARG;
 				goto return_error;
 			}
-			if (line->tail->type != EXPR_TYPE_COMMAND) {
+			if (line->exprs.back().type != EXPR_TYPE_COMMAND) {
 				res = PARSER_ERR_PIPE_WITH_LEFT_ARG_NOT_A_COMMAND;
 				goto return_error;
 			}
-			e = calloc(1, sizeof(*e));
-			e->type = EXPR_TYPE_PIPE;
-			command_line_append(line, e);
+			expr e;
+			e.type = EXPR_TYPE_PIPE;
+			line->exprs.push_back(std::move(e));
 			continue;
-		case TOKEN_TYPE_AND:
-			if (line->tail == NULL) {
+		}
+		case TOKEN_TYPE_AND: {
+			if (line->exprs.empty()) {
 				res = PARSER_ERR_AND_WITH_NO_LEFT_ARG;
 				goto return_error;
 			}
-			if (line->tail->type != EXPR_TYPE_COMMAND) {
+			if (line->exprs.back().type != EXPR_TYPE_COMMAND) {
 				res = PARSER_ERR_AND_WITH_LEFT_ARG_NOT_A_COMMAND;
 				goto return_error;
 			}
-			e = calloc(1, sizeof(*e));
-			e->type = EXPR_TYPE_AND;
-			command_line_append(line, e);
+			expr e;
+			e.type = EXPR_TYPE_AND;
+			line->exprs.push_back(std::move(e));
 			continue;
-		case TOKEN_TYPE_OR:
-			if (line->tail == NULL) {
+		}
+		case TOKEN_TYPE_OR: {
+			if (line->exprs.empty()) {
 				res = PARSER_ERR_OR_WITH_NO_LEFT_ARG;
 				goto return_error;
 			}
-			if (line->tail->type != EXPR_TYPE_COMMAND) {
+			if (line->exprs.back().type != EXPR_TYPE_COMMAND) {
 				res = PARSER_ERR_OR_WITH_LEFT_ARG_NOT_A_COMMAND;
 				goto return_error;
 			}
-			e = calloc(1, sizeof(*e));
-			e->type = EXPR_TYPE_OR;
-			command_line_append(line, e);
+			expr e;
+			e.type = EXPR_TYPE_OR;
+			line->exprs.push_back(std::move(e));
 			continue;
+		}
 		case TOKEN_TYPE_OUT_NEW:
 		case TOKEN_TYPE_OUT_APPEND:
 		case TOKEN_TYPE_BACKGROUND:
@@ -366,59 +285,57 @@ parser_pop_next(struct parser *p, struct command_line **out)
 	goto return_no_line;
 
 close_and_return:
-	if (token.type == TOKEN_TYPE_OUT_NEW || token.type == TOKEN_TYPE_OUT_APPEND)
+	if (tok.type == TOKEN_TYPE_OUT_NEW || tok.type == TOKEN_TYPE_OUT_APPEND)
 	{
-		if (token.type == TOKEN_TYPE_OUT_NEW)
+		if (tok.type == TOKEN_TYPE_OUT_NEW)
 			line->out_type = OUTPUT_TYPE_FILE_NEW;
 		else
 			line->out_type = OUTPUT_TYPE_FILE_APPEND;
-		uint32_t used = parse_token(pos, end, &token);
+		uint32_t used = parse_token(pos, end, tok);
 		if (used == 0)
 			goto return_no_line;
 		pos += used;
-		if (token.type != TOKEN_TYPE_STR) {
+		if (tok.type != TOKEN_TYPE_STR) {
 			res = PARSER_ERR_OUTOUT_REDIRECT_BAD_ARG;
 			goto return_error;
 		}
-		line->out_file = token_strdup(&token);
-		used = parse_token(pos, end, &token);
+		line->out_file = std::move(tok.data);
+		used = parse_token(pos, end, tok);
 		if (used == 0)
 			goto return_no_line;
 		pos += used;
 	}
-	if (token.type == TOKEN_TYPE_BACKGROUND) {
+	if (tok.type == TOKEN_TYPE_BACKGROUND) {
 		line->is_background = true;
-		uint32_t used = parse_token(pos, end, &token);
+		uint32_t used = parse_token(pos, end, tok);
 		if (used == 0)
 			goto return_no_line;
 		pos += used;
 	}
-	if (token.type == TOKEN_TYPE_NEW_LINE) {
-		assert(line->tail != NULL);
-		parser_consume(p, pos - begin);
-		if (line->tail->type != EXPR_TYPE_COMMAND) {
+	if (tok.type == TOKEN_TYPE_NEW_LINE) {
+		assert(!line->exprs.empty());
+		m_buffer.erase(0, pos - begin);
+		if (line->exprs.back().type != EXPR_TYPE_COMMAND) {
 			res = PARSER_ERR_ENDS_NOT_WITH_A_COMMAND;
 			goto return_no_line;
 		}
 		res = PARSER_ERR_NONE;
-		*out = line;
-		goto return_final;
+		out = line;
+		return res;
 	}
 	res = PARSER_ERR_TOO_LATE_ARGUMENTS;
 	goto return_error;
 
 return_error:
-	/*
-	 * Try to skip the whole current line. It can't be executed but can't
-	 * just crash here because of that.
-	 */
+	// Try to skip the whole current line. It can't be executed but can't just crash
+	// here because of that.
 	while (pos < end) {
-		uint32_t used = parse_token(pos, end, &token);
+		uint32_t used = parse_token(pos, end, tok);
 		if (used == 0)
 			break;
 		pos += used;
-		if (token.type == TOKEN_TYPE_NEW_LINE) {
-			parser_consume(p, pos - begin);
+		if (tok.type == TOKEN_TYPE_NEW_LINE) {
+			m_buffer.erase(0, pos - begin);
 			goto return_no_line;
 		}
 	}
@@ -426,17 +343,7 @@ return_error:
 	goto return_no_line;
 
 return_no_line:
-	command_line_delete(line);
-	*out = NULL;
-
-return_final:
-	free(token.data);
+	delete line;
+	out = nullptr;
 	return res;
-}
-
-void
-parser_delete(struct parser *p)
-{
-	free(p->buffer);
-	free(p);
 }

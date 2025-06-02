@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 project(Shell C CXX)
 
+set(CMAKE_CXX_STANDARD 17)
 set(COMMON_FLAGS
     -Wextra
     -Werror
@@ -22,14 +23,14 @@ set(UTILS_DIR ${CMAKE_SOURCE_DIR}/../utils)
 set(UTILS_SOURCES)
 
 if(ENABLE_LEAK_CHECKS)
-    list(APPEND UTILS_SOURCES ${UTILS_DIR}/heap_help/heap_help.c)
+    list(APPEND UTILS_SOURCES ${UTILS_DIR}/heap_help/heap_help.cpp)
     include_directories(${UTILS_DIR}/heap_help)
 endif()
 
 if(NOT ENABLE_GLOB_SEARCH)
     set(TEST_SOURCES
-        solution.c
-        parser.c
+        solution.cpp
+        parser.cpp
         ${UTILS_SOURCES}
     )
     add_executable(mybash ${TEST_SOURCES})

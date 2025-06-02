@@ -1,9 +1,9 @@
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-
-struct parser;
+#include <list>
+#include <optional>
+#include <string>
+#include <vector>
 
 enum parser_error {
 	PARSER_ERR_NONE,
@@ -19,10 +19,10 @@ enum parser_error {
 };
 
 struct command {
-	char *exe;
-	char** args;
-	uint32_t arg_count;
-	uint32_t arg_capacity;
+	~command();
+
+	std::string exe;
+	std::vector<char *> args;
 };
 
 enum expr_type {
@@ -33,10 +33,9 @@ enum expr_type {
 };
 
 struct expr {
-	enum expr_type type;
-	/** Valid if the type is COMMAND. */
-	struct command cmd;
-	struct expr *next;
+	expr_type type;
+	// Valid if the type is COMMAND.
+	command cmd;
 };
 
 enum output_type {
@@ -46,25 +45,21 @@ enum output_type {
 };
 
 struct command_line {
-	struct expr *head;
-	struct expr *tail;
-	enum output_type out_type;
-	/** Valid if the out type is FILE. */
-	char *out_file;
+	std::list<expr> exprs;
+	output_type out_type;
+	// Valid if the out type is FILE.
+	std::optional<std::string> out_file;
 	bool is_background;
 };
 
-void
-command_line_delete(struct command_line *line);
+class parser {
+public:
+	void
+	feed(const char *str, uint32_t len);
 
-struct parser *
-parser_new(void);
+	parser_error
+	pop_next(command_line *&out);
 
-void
-parser_feed(struct parser *p, const char *str, uint32_t len);
-
-enum parser_error
-parser_pop_next(struct parser *p, struct command_line **out);
-
-void
-parser_delete(struct parser *p);
+private:
+	std::string m_buffer;
+};

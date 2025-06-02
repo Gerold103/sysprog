@@ -4,10 +4,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#if defined(__cplusplus)
-extern "C" {
-#endif /* defined(__cplusplus) */
-
 #define unit_test_start() \
 	printf("\t-------- %s started --------\n", __func__)
 
@@ -39,7 +35,3 @@ extern "C" {
 } while(0)
 
 bool doCmdMaxPoints(int argc, char **argv);
-
-#if defined(__cplusplus)
-} /* extern "C" */
-#endif /* defined(__cplusplus) */
