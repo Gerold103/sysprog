@@ -19,19 +19,19 @@ option(ENABLE_GLOB_SEARCH
     OFF)
 
 set(UTILS_DIR ${CMAKE_SOURCE_DIR}/../utils)
-set(UTILS_SOURCES ${UTILS_DIR}/unit.c)
+set(UTILS_SOURCES ${UTILS_DIR}/unit.cpp)
 
 include_directories(${UTILS_DIR})
 
 if(ENABLE_LEAK_CHECKS)
-    list(APPEND UTILS_SOURCES ${UTILS_DIR}/heap_help/heap_help.c)
+    list(APPEND UTILS_SOURCES ${UTILS_DIR}/heap_help/heap_help.cpp)
     include_directories(${UTILS_DIR}/heap_help)
 endif()
 
 if(NOT ENABLE_GLOB_SEARCH)
     set(TEST_SOURCES
-        userfs.c
-        test.c
+        userfs.cpp
+        test.cpp
         ${UTILS_SOURCES}
     )
     add_executable(test ${TEST_SOURCES})

@@ -1,5 +1,6 @@
 #include "userfs.h"
 #include "unit.h"
+
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
@@ -47,7 +48,7 @@ test_stress_open(void)
 	char name[16], buf[16];
 	unit_msg("open %d read and write descriptors, fill with data", count);
 	for (int i = 0; i < count; ++i) {
-		int name_len = sprintf(name, "file%d", i) + 1;
+		int name_len = snprintf(name, sizeof(name), "file%d", i) + 1;
 		int *in = &fd[i][0], *out = &fd[i][1];
 		*in = ufs_open(name, UFS_CREATE);
 		*out = ufs_open(name, 0);
@@ -57,7 +58,7 @@ test_stress_open(void)
 	}
 	unit_msg("read the data back");
 	for (int i = 0; i < count; ++i) {
-		int name_len = sprintf(name, "file%d", i) + 1;
+		int name_len = snprintf(name, sizeof(name), "file%d", i) + 1;
 		int *in = &fd[i][0], *out = &fd[i][1];
 		ssize_t rc = ufs_read(*in, buf, sizeof(buf));
 		unit_fail_if(rc != name_len);
@@ -301,7 +302,7 @@ test_max_file_size(void)
 	unit_fail_if(fd == -1);
 
 	int buf_size = 1024 * 1024;
-	char *buf = (char *) malloc(buf_size);
+	char *buf = new char[buf_size];
 	for (int i = 0; i < buf_size; ++i)
 		buf[i] = 'a' + i % 26;
 	for (int i = 0; i < 100; ++i) {
@@ -319,14 +320,14 @@ test_max_file_size(void)
 	unit_fail_if(ufs_close(fd) != 0);
 	fd = ufs_open("file", 0);
 	unit_fail_if(fd == -1);
-	char *buf2 = (char *) malloc(buf_size);
+	char *buf2 = new char[buf_size];
 	for (int i = 0; i < 100; ++i) {
 		ssize_t rc = ufs_read(fd, buf2, buf_size);
 		unit_fail_if(rc != buf_size);
 		unit_fail_if(memcmp(buf2, buf, buf_size) != 0);
 	}
-	free(buf2);
-	free(buf);
+	delete[] buf2;
+	delete[] buf;
 	unit_msg("read works");
 	unit_fail_if(ufs_close(fd) == -1);
 	unit_fail_if(ufs_delete("file") == -1);
