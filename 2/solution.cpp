@@ -7,7 +7,7 @@
 static void
 execute_command_line(const command_line &line)
 {
-	/* REPLACE THIS CODE WITH ACTUAL COMMAND EXECUTION */
+	// REPLACE THIS CODE WITH ACTUAL COMMAND EXECUTION
 
 	std::cout << "================================\n";
 	std::cout << "Command line:\n";
