@@ -7,61 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct data_vector {
-	unsigned *data;
-	size_t size;
-	size_t capacity;
-};
-
-#if 0 /* Uncomment this if want to use */
-
-/** Append @a count messages in @a data to the end of the vector. */
-static void
-data_vector_append_many(struct data_vector *vector,
-	const unsigned *data, size_t count)
-{
-	if (vector->size + count > vector->capacity) {
-		if (vector->capacity == 0)
-			vector->capacity = 4;
-		else
-			vector->capacity *= 2;
-		if (vector->capacity < vector->size + count)
-			vector->capacity = vector->size + count;
-		vector->data = realloc(vector->data,
-			sizeof(vector->data[0]) * vector->capacity);
-	}
-	memcpy(&vector->data[vector->size], data, sizeof(data[0]) * count);
-	vector->size += count;
-}
-
-/** Append a single message to the vector. */
-static void
-data_vector_append(struct data_vector *vector, unsigned data)
-{
-	data_vector_append_many(vector, &data, 1);
-}
-
-/** Pop @a count of messages into @a data from the head of the vector. */
-static void
-data_vector_pop_first_many(struct data_vector *vector, unsigned *data, size_t count)
-{
-	assert(count <= vector->size);
-	memcpy(data, vector->data, sizeof(data[0]) * count);
-	vector->size -= count;
-	memmove(vector->data, &vector->data[count], vector->size * sizeof(vector->data[0]));
-}
-
-/** Pop a single message from the head of the vector. */
-static unsigned
-data_vector_pop_first(struct data_vector *vector)
-{
-	unsigned data = 0;
-	data_vector_pop_first_many(vector, &data, 1);
-	return data;
-}
-
-#endif
-
 /**
  * One coroutine waiting to be woken up in a list of other
  * suspended coros.
@@ -110,7 +55,7 @@ struct coro_bus_channel {
 	/** Coroutines waiting until the channel is not empty. */
 	struct wakeup_queue recv_queue;
 	/** Message queue. */
-	struct data_vector data;
+	/* std::vector/queue/deque/list/...<unsigned> data; */
 };
 
 struct coro_bus {
