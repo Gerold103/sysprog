@@ -14,7 +14,7 @@ test_suspend_and_return_f(void *arg)
 static void *
 test_wakeup_f(void *arg)
 {
-	coro_wakeup(arg);
+	coro_wakeup((struct coro *)arg);
 	return NULL;
 }
 
@@ -44,7 +44,7 @@ struct test_loop_ctx {
 static void *
 test_loop_coro_f(void *arg)
 {
-	struct test_loop_ctx *ctx = arg;
+	struct test_loop_ctx *ctx = (decltype(ctx))arg;
 	for (int i = 0; i < ctx->yield_count; ++i) {
 		unit_assert(*ctx->next_id == ctx->id);
 		*ctx->next_id = (*ctx->next_id + 1) % ctx->coro_count;
@@ -88,7 +88,7 @@ struct test_wakeup_self_ctx {
 static void *
 test_wakeup_self_and_suspend_f(void *arg)
 {
-	struct test_wakeup_self_ctx *ctx = arg;
+	struct test_wakeup_self_ctx *ctx = (decltype(ctx))arg;
 
 	coro_wakeup(coro_this());
 	unit_check(!ctx->is_suspended, "not suspended yet");
@@ -126,7 +126,7 @@ test_wakup_self(void)
 static void *
 test_join_f(void *arg)
 {
-	return coro_join(arg);
+	return coro_join((struct coro *)arg);
 }
 
 static void

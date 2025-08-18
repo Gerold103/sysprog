@@ -21,7 +21,7 @@ struct ctx_send {
 static void *
 send_f(void *arg)
 {
-	struct ctx_send *ctx = arg;
+	struct ctx_send *ctx = (decltype(ctx))arg;
 	ctx->is_started = true;
 	ctx->rc = coro_bus_send(ctx->bus, ctx->channel, ctx->data);
 	ctx->err = coro_bus_errno();
@@ -68,7 +68,7 @@ struct ctx_recv {
 static void *
 recv_f(void *arg)
 {
-	struct ctx_recv *ctx = arg;
+	struct ctx_recv *ctx = (decltype(ctx))arg;
 	ctx->is_started = true;
 	ctx->rc = coro_bus_recv(ctx->bus, ctx->channel, ctx->data);
 	ctx->err = coro_bus_errno();
@@ -556,7 +556,7 @@ struct ctx_stress_send {
 static void *
 stress_send_f(void *arg)
 {
-	struct ctx_stress_send *ctx = arg;
+	struct ctx_stress_send *ctx = (decltype(ctx))arg;
 	while (ctx->next_data < ctx->last_data) {
 		unit_assert(coro_bus_send(ctx->bus, ctx->channel,
 			ctx->next_data++) == 0);
@@ -575,7 +575,7 @@ struct ctx_stress_recv {
 static void *
 stress_recv_f(void *arg)
 {
-	struct ctx_stress_recv *ctx = arg;
+	struct ctx_stress_recv *ctx = (decltype(ctx))arg;
 	while (ctx->size < ctx->capacity) {
 		unit_assert(coro_bus_recv(ctx->bus, ctx->channel,
 			&ctx->datas[ctx->size++]) == 0);
@@ -592,7 +592,7 @@ struct ctx_stress_send_recv {
 static void *
 stress_send_recv_f(void *arg)
 {
-	struct ctx_stress_send_recv *ctx = arg;
+	struct ctx_stress_send_recv *ctx = (decltype(ctx))arg;
 
 	const unsigned limit = 10;
 	const unsigned data_count = 1234;
@@ -780,7 +780,7 @@ struct ctx_broadcast {
 static void *
 broadcast_f(void *arg)
 {
-	struct ctx_broadcast *ctx = arg;
+	struct ctx_broadcast *ctx = (decltype(ctx))arg;
 	ctx->is_started = true;
 	ctx->rc = coro_bus_broadcast(ctx->bus, ctx->data);
 	ctx->err = coro_bus_errno();
@@ -1140,7 +1140,7 @@ struct ctx_send_v {
 static void *
 send_v_f(void *arg)
 {
-	struct ctx_send_v *ctx = arg;
+	struct ctx_send_v *ctx = (decltype(ctx))arg;
 	ctx->is_started = true;
 	ctx->rc = coro_bus_send_v(ctx->bus, ctx->channel, ctx->data,
 		ctx->count);
@@ -1220,7 +1220,7 @@ test_send_vector_blocking(void)
 static void *
 send_v_all_f(void *arg)
 {
-	struct ctx_send_v *ctx = arg;
+	struct ctx_send_v *ctx = (decltype(ctx))arg;
 	ctx->is_started = true;
 	while (ctx->count > 0) {
 		int rc = coro_bus_send_v(ctx->bus, ctx->channel, ctx->data,
@@ -1269,7 +1269,7 @@ test_send_vector_blocking_recv_many(void)
 
 	const unsigned data_per_coro = 100;
 	const unsigned data_count = coro_count * data_per_coro;
-	unsigned *data = malloc(sizeof(*data) * data_count);
+	unsigned *data = new unsigned[data_count];
 	for (unsigned i = 0; i < data_count; ++i)
 		data[i] = i;
 	unit_msg("start many coros");
@@ -1286,7 +1286,8 @@ test_send_vector_blocking_recv_many(void)
 	}
 
 	unit_msg("receive all the messages");
-	bool *results = calloc(data_count, sizeof(*results));
+	bool *results = new bool[data_count];
+	memset(results, 0, data_count * sizeof(*results));
 	for (unsigned i = 0; i < data_count; ++i) {
 		unsigned data = 0;
 		unit_assert(coro_bus_recv(bus, c1, &data) == 0);
@@ -1306,8 +1307,8 @@ test_send_vector_blocking_recv_many(void)
 	for (unsigned i = 0; i < data_count; ++i)
 		unit_assert(results[i]);
 
-	free(results);
-	free(data);
+	delete[] results;
+	delete[] data;
 	coro_bus_channel_close(bus, c1);
 	coro_bus_delete(bus);
 	unit_test_finish();
@@ -1433,7 +1434,7 @@ struct ctx_recv_v {
 static void *
 recv_v_f(void *arg)
 {
-	struct ctx_recv_v *ctx = arg;
+	struct ctx_recv_v *ctx = (decltype(ctx))arg;
 	ctx->is_started = true;
 	ctx->rc = coro_bus_recv_v(ctx->bus, ctx->channel, ctx->data,
 		ctx->count);
@@ -1512,7 +1513,7 @@ test_recv_vector_blocking(void)
 static void *
 recv_v_all_f(void *arg)
 {
-	struct ctx_recv_v *ctx = arg;
+	struct ctx_recv_v *ctx = (decltype(ctx))arg;
 	ctx->is_started = true;
 	while (ctx->count > 0) {
 		int rc = coro_bus_recv_v(ctx->bus, ctx->channel, ctx->data,
@@ -1560,7 +1561,8 @@ test_recv_vector_blocking_recv_many(void)
 	struct ctx_recv_v ctx[coro_count];
 	const unsigned data_per_coro = 100;
 	const unsigned data_count = coro_count * data_per_coro;
-	unsigned *data = calloc(data_count, sizeof(*data));
+	unsigned *data = new unsigned[data_count];
+	memset(data, 0, sizeof(*data) * data_count);
 
 	unit_msg("start many coros");
 	for (unsigned i = 0; i < coro_count; ++i) {
@@ -1587,14 +1589,15 @@ test_recv_vector_blocking_recv_many(void)
 	}
 
 	unit_msg("check that nothing is lost");
-	bool *results = calloc(data_count, sizeof(*results));
+	bool *results = new bool[data_count];
+	memset(results, 0, sizeof(*results) * data_count);
 	for (unsigned i = 0; i < data_count; ++i) {
 		unit_assert(!results[data[i]]);
 		results[data[i]] = true;
 	}
-	free(results);
+	delete[] results;
 
-	free(data);
+	delete[] data;
 	coro_bus_channel_close(bus, c1);
 	coro_bus_delete(bus);
 	unit_test_finish();
