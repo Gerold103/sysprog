@@ -1,7 +1,11 @@
 #pragma once
 
+#include <list>
+#include <optional>
 #include <stdbool.h>
 #include <stdint.h>
+#include <string>
+#include <vector>
 
 struct parser;
 
@@ -19,10 +23,8 @@ enum parser_error {
 };
 
 struct command {
-	char *exe;
-	char** args;
-	uint32_t arg_count;
-	uint32_t arg_capacity;
+	std::string exe;
+	std::vector<std::string> args;
 };
 
 enum expr_type {
@@ -33,10 +35,9 @@ enum expr_type {
 };
 
 struct expr {
-	enum expr_type type;
+	enum expr_type type = EXPR_TYPE_COMMAND;
 	/** Valid if the type is COMMAND. */
-	struct command cmd;
-	struct expr *next;
+	std::optional<command> cmd;
 };
 
 enum output_type {
@@ -46,16 +47,12 @@ enum output_type {
 };
 
 struct command_line {
-	struct expr *head;
-	struct expr *tail;
-	enum output_type out_type;
-	/** Valid if the out type is FILE. */
-	char *out_file;
-	bool is_background;
+	std::list<expr> exprs;
+	enum output_type out_type = OUTPUT_TYPE_STDOUT;
+	/** Non-empty if the out type is FILE. */
+	std::string out_file;
+	bool is_background = false;
 };
-
-void
-command_line_delete(struct command_line *line);
 
 struct parser *
 parser_new(void);

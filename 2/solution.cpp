@@ -17,30 +17,28 @@ execute_command_line(const struct command_line *line)
 	if (line->out_type == OUTPUT_TYPE_STDOUT) {
 		printf("stdout\n");
 	} else if (line->out_type == OUTPUT_TYPE_FILE_NEW) {
-		printf("new file - \"%s\"\n", line->out_file);
+		printf("new file - \"%s\"\n", line->out_file.c_str());
 	} else if (line->out_type == OUTPUT_TYPE_FILE_APPEND) {
-		printf("append file - \"%s\"\n", line->out_file);
+		printf("append file - \"%s\"\n", line->out_file.c_str());
 	} else {
 		assert(false);
 	}
 	printf("Expressions:\n");
-	const struct expr *e = line->head;
-	while (e != NULL) {
-		if (e->type == EXPR_TYPE_COMMAND) {
-			printf("\tCommand: %s", e->cmd.exe);
-			for (uint32_t i = 0; i < e->cmd.arg_count; ++i)
-				printf(" %s", e->cmd.args[i]);
+	for (const expr &e : line->exprs) {
+		if (e.type == EXPR_TYPE_COMMAND) {
+			printf("\tCommand: %s", e.cmd->exe.c_str());
+			for (const std::string& arg : e.cmd->args)
+				printf(" %s", arg.c_str());
 			printf("\n");
-		} else if (e->type == EXPR_TYPE_PIPE) {
+		} else if (e.type == EXPR_TYPE_PIPE) {
 			printf("\tPIPE\n");
-		} else if (e->type == EXPR_TYPE_AND) {
+		} else if (e.type == EXPR_TYPE_AND) {
 			printf("\tAND\n");
-		} else if (e->type == EXPR_TYPE_OR) {
+		} else if (e.type == EXPR_TYPE_OR) {
 			printf("\tOR\n");
 		} else {
 			assert(false);
 		}
-		e = e->next;
 	}
 }
 
@@ -63,7 +61,7 @@ main(void)
 				continue;
 			}
 			execute_command_line(line);
-			command_line_delete(line);
+			delete line;
 		}
 	}
 	parser_delete(p);

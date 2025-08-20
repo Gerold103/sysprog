@@ -14,15 +14,15 @@ test_one_word(void)
 	parser_feed(p, "ls\n", 3);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
-	unit_check(line->out_file == NULL, "out file");
+	unit_check(line->out_file.empty(), "out file");
 	unit_check(!line->is_background, "is background");
-	unit_check(line->head == line->tail && line->head != NULL, "one expr");
-	struct expr *e = line->head;
+	unit_check(line->exprs.size() == 1, "one expr");
+	expr *e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "ls") == 0, "exe");
-	unit_check(e->cmd.arg_count == 0, "arg count");
-	unit_check(e->next == NULL, "no next exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "ls", "exe");
+	unit_check(e->cmd->args.empty(), "arg count");
+	delete line;
 
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line == NULL, "no more lines yet");
@@ -30,12 +30,13 @@ test_one_word(void)
 	unit_msg("Feed next command");
 	parser_feed(p, "   pwd \n", 8);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
-	e = line->head;
+	unit_check(line->exprs.size() == 1, "one expr");
+	e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "pwd") == 0, "exe");
-	unit_check(e->cmd.arg_count == 0, "arg count");
-	unit_check(e->next == NULL, "no next exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "pwd", "exe");
+	unit_check(e->cmd->args.empty(), "arg count");
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -61,9 +62,9 @@ test_incomplete(void)
 
 	parser_feed(p, "\n", 1);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
-	unit_check(line->head->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(line->head->cmd.exe, "ls") == 0, "exe");
-	command_line_delete(line);
+	unit_check(line->exprs.front().type == EXPR_TYPE_COMMAND, "expr type");
+	unit_check(line->exprs.front().cmd->exe == "ls", "exe");
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -86,13 +87,14 @@ test_two_words(void)
 	str = "   \t\r  \n";
 	parser_feed(p, str, strlen(str));
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
-	struct expr *e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	expr *e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "mkdir") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "../testdir") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "mkdir", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "../testdir", "arg[0]");
+	delete line;
 
 	unit_msg("Quoted argument");
 	str = "touch \"my file with whitespaces in name.txt\"";
@@ -104,14 +106,14 @@ test_two_words(void)
 	}
 	parser_feed(p, "\n", 1);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
-	e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "touch") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0],
-		"my file with whitespaces in name.txt") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "touch", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "my file with whitespaces in name.txt", "arg[0]");
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -134,14 +136,14 @@ test_escape_in_string(void)
 	}
 	parser_feed(p, "\n", 1);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
-	struct expr *e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	expr *e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0],
-		"123 >&| 456 \\\" str \\\"") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "123 >&| 456 \\\" str \\\"", "arg[0]");
+	delete line;
 
 	/* echo "test 'test'' \\" */
 	str = "echo \"test 'test'' \\\\\"";
@@ -153,13 +155,14 @@ test_escape_in_string(void)
 	}
 	parser_feed(p, "\n", 1);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
-	e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "test 'test'' \\") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "test 'test'' \\", "arg[0]");
+	delete line;
 
 	unit_msg("Complex string");
 	/*
@@ -183,19 +186,20 @@ test_escape_in_string(void)
 	parser_feed(p, "\n", 1);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_FILE_NEW, "out type");
-	unit_check(strcmp(line->out_file, "test.py") == 0, "out file");
-	e = line->head;
+	unit_check(line->out_file == "test.py", "out file");
+	unit_assert(line->exprs.size() == 1);
+	e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "printf") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0],
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "printf", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] ==
 		"import time\\n"
 		"time.sleep(0.1)\\n"
 		"f = open('test.txt', 'a')\\n"
 		"f.write('Text\\\\n')\\n"
-		"f.close()\\n") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+		"f.close()\\n", "arg[0]");
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -219,17 +223,16 @@ test_output_redirect(void)
 	parser_feed(p, "\n", 1);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_FILE_NEW, "out type");
-	unit_check(strcmp(line->out_file,
-		"my file with whitespaces in name.txt") == 0, "out file");
+	unit_check(line->out_file == "my file with whitespaces in name.txt", "out file");
 	unit_check(!line->is_background, "not background");
-	struct expr *e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	expr *e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0],
-		"123 456 \\\" str \\\"") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "123 456 \\\" str \\\"", "arg[0]");
+	delete line;
 
 	unit_msg("Append to file");
 	/* echo "test" >> "my file with whitespaces in name.txt" */
@@ -243,16 +246,16 @@ test_output_redirect(void)
 	parser_feed(p, "\n", 1);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_FILE_APPEND, "out type");
-	unit_check(strcmp(line->out_file,
-		"my file with whitespaces in name.txt") == 0, "out file");
+	unit_check(line->out_file == "my file with whitespaces in name.txt", "out file");
 	unit_check(!line->is_background, "not background");
-	e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "test") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "test", "arg[0]");
+	delete line;
 
 	unit_msg("No spaces");
 	str = "echo \"4\">file";
@@ -265,15 +268,16 @@ test_output_redirect(void)
 	parser_feed(p, "\n", 1);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_FILE_NEW, "out type");
-	unit_check(strcmp(line->out_file, "file") == 0, "out file");
+	unit_check(line->out_file == "file", "out file");
 	unit_check(!line->is_background, "not background");
-	e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "4") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "4", "arg[0]");
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -298,14 +302,14 @@ test_escape_outside_of_string(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	struct expr *e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	auto e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "cat") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0],
-		"my file with whitespaces in name.txt") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "cat", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "my file with whitespaces in name.txt", "arg[0]");
+	delete line;
 
 	unit_msg("Escape new line");
 	/*
@@ -323,13 +327,14 @@ test_escape_outside_of_string(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "123456") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "123456", "arg[0]");
+	delete line;
 
 	/*
 	 * echo 123\
@@ -347,22 +352,27 @@ test_escape_outside_of_string(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	e = line->head;
+	unit_assert(!line->exprs.empty());
+	e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "123456") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "123456", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_PIPE, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "grep") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "2") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "grep", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "2", "arg[0]");
+
+	unit_assert(++e == line->exprs.end());
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -386,23 +396,27 @@ test_pipe(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	struct expr *e = line->head;
+	unit_assert(!line->exprs.empty());
+	auto e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "100") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "100", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_PIPE, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "grep") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "100") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "grep", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "100", "arg[0]");
 
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(++e == line->exprs.end());
+	delete line;
 
 	unit_msg("Multiple pipes");
 	str = "echo 'source string' | sed 's/source/destination/g' | sed 's/string/value/g'";
@@ -416,33 +430,38 @@ test_pipe(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	e = line->head;
+	unit_assert(!line->exprs.empty());
+	e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "source string") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "source string", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_PIPE, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "sed") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0],
-		"s/source/destination/g") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "sed", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "s/source/destination/g", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_PIPE, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "sed") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "s/string/value/g") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "sed", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "s/string/value/g", "arg[0]");
 
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(++e == line->exprs.end());
+	delete line;
 
 	unit_msg("Multiple args and pipes");
 	str = "yes bigdata | head -n 100000 | wc -l | tr -d [:blank:]";
@@ -456,43 +475,51 @@ test_pipe(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	e = line->head;
+	unit_assert(!line->exprs.empty());
+	e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "yes") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "bigdata") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "yes", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "bigdata", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_PIPE, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "head") == 0, "exe");
-	unit_check(e->cmd.arg_count == 2, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "-n") == 0, "arg[0]");
-	unit_check(strcmp(e->cmd.args[1], "100000") == 0, "arg[1]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "head", "exe");
+	unit_check(e->cmd->args.size() == 2, "arg count");
+	unit_check(e->cmd->args[0] == "-n", "arg[0]");
+	unit_check(e->cmd->args[1] == "100000", "arg[1]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_PIPE, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "wc") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "-l") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "wc", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "-l", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_PIPE, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "tr") == 0, "exe");
-	unit_check(e->cmd.arg_count == 2, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "-d") == 0, "arg[0]");
-	unit_check(strcmp(e->cmd.args[1], "[:blank:]") == 0, "arg[1]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "tr", "exe");
+	unit_check(e->cmd->args.size() == 2, "arg count");
+	unit_check(e->cmd->args[0] == "-d", "arg[0]");
+	unit_check(e->cmd->args[1] == "[:blank:]", "arg[1]");
 
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(++e == line->exprs.end());
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -516,13 +543,14 @@ test_comments(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	struct expr *e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	expr *e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "100") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "100", "arg[0]");
+	delete line;
 
 	str = " # empty line, only comment";
 	len = strlen(str);
@@ -546,14 +574,15 @@ test_comments(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	e = line->head;
+	unit_assert(line->exprs.size() == 1);
+	e = &line->exprs.front();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "grep") == 0, "exe");
-	unit_check(e->cmd.arg_count == 2, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "300") == 0, "arg[0]");
-	unit_check(strcmp(e->cmd.args[1], "400") == 0, "arg[1]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "grep", "exe");
+	unit_check(e->cmd->args.size() == 2, "arg count");
+	unit_check(e->cmd->args[0] == "300", "arg[0]");
+	unit_check(e->cmd->args[1] == "400", "arg[1]");
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -583,22 +612,27 @@ test_multiline_string(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	struct expr *e = line->head;
+	unit_assert(!line->exprs.empty());
+	auto e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "123\n456\n7\n") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "123\n456\n7\n", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_PIPE, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "grep") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "4") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "grep", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "4", "arg[0]");
+
+	unit_assert(++e == line->exprs.end());
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -622,21 +656,26 @@ test_logical_operators(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	struct expr *e = line->head;
+	unit_assert(!line->exprs.empty());
+	auto e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "false") == 0, "exe");
-	unit_check(e->cmd.arg_count == 0, "arg count");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "false", "exe");
+	unit_check(e->cmd->args.empty(), "arg count");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_AND, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "123") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "123", "arg[0]");
+
+	unit_assert(++e == line->exprs.end());
+	delete line;
 
 	unit_msg("Multiple operators");
 	str = "true || false || true && echo 123";
@@ -650,37 +689,45 @@ test_logical_operators(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	e = line->head;
+	e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "true") == 0, "exe");
-	unit_check(e->cmd.arg_count == 0, "arg count");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "true", "exe");
+	unit_check(e->cmd->args.empty(), "arg count");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_OR, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "false") == 0, "exe");
-	unit_check(e->cmd.arg_count == 0, "arg count");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "false", "exe");
+	unit_check(e->cmd->args.empty(), "arg count");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_OR, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "true") == 0, "exe");
-	unit_check(e->cmd.arg_count == 0, "arg count");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "true", "exe");
+	unit_check(e->cmd->args.empty(), "arg count");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_AND, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "123") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "123", "arg[0]");
+
+	unit_assert(++e == line->exprs.end());
+	delete line;
 
 	unit_msg("Logical operators and pipes");
 	str = "echo 100 | grep 1 && echo 200 | grep 2";
@@ -694,40 +741,48 @@ test_logical_operators(void)
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_STDOUT, "out type");
 	unit_check(!line->is_background, "not background");
-	e = line->head;
+	e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "100") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "100", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_PIPE, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "grep") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "1") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "grep", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "1", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_AND, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "200") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "200", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_PIPE, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "grep") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "2") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "grep", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "2", "arg[0]");
+
+	unit_assert(++e == line->exprs.end());
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -750,24 +805,29 @@ test_background(void)
 	parser_feed(p, "\n", 1);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse");
 	unit_check(line->out_type == OUTPUT_TYPE_FILE_NEW, "out type");
-	unit_check(strcmp(line->out_file, "test.txt") == 0, "out file");
+	unit_check(line->out_file == "test.txt", "out file");
 	unit_check(line->is_background, "is background");
-	struct expr *e = line->head;
+	unit_assert(!line->exprs.empty());
+	auto e = line->exprs.begin();
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "sleep") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "0.5") == 0, "arg[0]");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "sleep", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "0.5", "arg[0]");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
+	unit_assert(!e->cmd);
 	unit_check(e->type == EXPR_TYPE_AND, "expr type");
 
-	e = e->next;
+	unit_assert(++e != line->exprs.end());
 	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(e->cmd.exe, "echo") == 0, "exe");
-	unit_check(e->cmd.arg_count == 1, "arg count");
-	unit_check(strcmp(e->cmd.args[0], "back sleep is done") == 0, "arg[0]");
-	unit_check(e->next == NULL, "no more exprs");
-	command_line_delete(line);
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	unit_check(e->cmd->args.size() == 1, "arg count");
+	unit_check(e->cmd->args[0] == "back sleep is done", "arg[0]");
+
+	unit_assert(++e == line->exprs.end());
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
@@ -811,9 +871,12 @@ test_errors(void)
 
 	parser_feed(p, "echo\n", 5);
 	unit_check(parser_pop_next(p, &line) == PARSER_ERR_NONE, "parse ok");
-	unit_check(line->head->type == EXPR_TYPE_COMMAND, "expr type");
-	unit_check(strcmp(line->head->cmd.exe, "echo") == 0, "exe");
-	command_line_delete(line);
+	unit_assert(line->exprs.size() == 1);
+	expr *e = &line->exprs.front();
+	unit_check(e->type == EXPR_TYPE_COMMAND, "expr type");
+	unit_assert(e->cmd);
+	unit_check(e->cmd->exe == "echo", "exe");
+	delete line;
 
 	parser_delete(p);
 	unit_test_finish();
