@@ -35,7 +35,7 @@ token_strdup(const struct token *t)
 {
 	assert(t->type == TOKEN_TYPE_STR);
 	assert(t->size > 0);
-	char *res = malloc(t->size + 1);
+	char *res = new char[t->size + 1];
 	memcpy(res, t->data, t->size);
 	res[t->size] = 0;
 	return res;
@@ -46,7 +46,10 @@ token_append(struct token *t, char c)
 {
 	if (t->size == t->capacity) {
 		t->capacity = (t->capacity + 1) * 2;
-		t->data = realloc(t->data, sizeof(*t->data) * t->capacity);
+		char *new_data = new char[t->capacity];
+		memcpy(new_data, t->data, t->size * sizeof(*new_data));
+		delete[] t->data;
+		t->data = new_data;
 	} else {
 		assert(t->size < t->capacity);
 	}
@@ -65,7 +68,10 @@ command_append_arg(struct command *cmd, char *arg)
 {
 	if (cmd->arg_count == cmd->arg_capacity) {
 		cmd->arg_capacity = (cmd->arg_capacity + 1) * 2;
-		cmd->args = realloc(cmd->args, sizeof(*cmd->args) * cmd->arg_capacity);
+		char **new_args = new char*[cmd->arg_capacity];
+		memcpy(new_args, cmd->args, cmd->arg_count * sizeof(*new_args));
+		delete[] cmd->args;
+		cmd->args = new_args;
 	} else {
 		assert(cmd->arg_count < cmd->arg_capacity);
 	}
@@ -79,16 +85,16 @@ command_line_delete(struct command_line *line)
 		struct expr *e = line->head;
 		if (e->type == EXPR_TYPE_COMMAND) {
 			struct command *cmd = &e->cmd;
-			free(cmd->exe);
+			delete[] cmd->exe;
 			for (uint32_t i = 0; i < cmd->arg_count; ++i)
-				free(cmd->args[i]);
-			free(cmd->args);
+				delete[] cmd->args[i];
+			delete[] cmd->args;
 		}
 		line->head = e->next;
-		free(e);
+		delete e;
 	}
-	free(line->out_file);
-	free(line);
+	delete[] line->out_file;
+	delete line;
 }
 
 static void
@@ -104,7 +110,9 @@ command_line_append(struct command_line *line, struct expr *e)
 struct parser *
 parser_new(void)
 {
-	return calloc(1, sizeof(struct parser));
+	struct parser *p = new parser();
+	memset(p, 0, sizeof(*p));
+	return p;
 }
 
 void
@@ -115,7 +123,10 @@ parser_feed(struct parser *p, const char *str, uint32_t len)
 		uint32_t new_capacity = (p->capacity + 1) * 2;
 		if (new_capacity - p->size < len)
 			new_capacity = p->size + len;
-		p->buffer = realloc(p->buffer, sizeof(*p->buffer) * new_capacity);
+		char *new_buffer = new char[new_capacity];
+		memcpy(new_buffer, p->buffer, p->size * sizeof(*new_buffer));
+		delete[] p->buffer;
+		p->buffer = new_buffer;
 		p->capacity = new_capacity;
 	}
 	memcpy(p->buffer + p->size, str, len);
@@ -287,11 +298,13 @@ parse_token(const char *pos, const char *end, struct token *out)
 enum parser_error
 parser_pop_next(struct parser *p, struct command_line **out)
 {
-	struct command_line *line = calloc(1, sizeof(*line));
+	struct command_line *line = new command_line();
+	memset(line, 0, sizeof(*line));
 	char *pos = p->buffer;
 	const char *begin = pos;
 	char *end = pos + p->size;
-	struct token token = {0};
+	struct token token;
+	memset(&token, 0, sizeof(token));
 	enum parser_error res = PARSER_ERR_NONE;
 
 	while (pos < end) {
@@ -306,7 +319,8 @@ parser_pop_next(struct parser *p, struct command_line **out)
 				command_append_arg(&line->tail->cmd, token_strdup(&token));
 				continue;
 			}
-			e = calloc(1, sizeof(*e));
+			e = new expr();
+			memset(e, 0, sizeof(*e));
 			e->type = EXPR_TYPE_COMMAND;
 			e->cmd.exe = token_strdup(&token);
 			command_line_append(line, e);
@@ -325,7 +339,8 @@ parser_pop_next(struct parser *p, struct command_line **out)
 				res = PARSER_ERR_PIPE_WITH_LEFT_ARG_NOT_A_COMMAND;
 				goto return_error;
 			}
-			e = calloc(1, sizeof(*e));
+			e = new expr();
+			memset(e, 0, sizeof(*e));
 			e->type = EXPR_TYPE_PIPE;
 			command_line_append(line, e);
 			continue;
@@ -338,7 +353,8 @@ parser_pop_next(struct parser *p, struct command_line **out)
 				res = PARSER_ERR_AND_WITH_LEFT_ARG_NOT_A_COMMAND;
 				goto return_error;
 			}
-			e = calloc(1, sizeof(*e));
+			e = new expr();
+			memset(e, 0, sizeof(*e));
 			e->type = EXPR_TYPE_AND;
 			command_line_append(line, e);
 			continue;
@@ -351,7 +367,8 @@ parser_pop_next(struct parser *p, struct command_line **out)
 				res = PARSER_ERR_OR_WITH_LEFT_ARG_NOT_A_COMMAND;
 				goto return_error;
 			}
-			e = calloc(1, sizeof(*e));
+			e = new expr();
+			memset(e, 0, sizeof(*e));
 			e->type = EXPR_TYPE_OR;
 			command_line_append(line, e);
 			continue;
@@ -430,13 +447,13 @@ return_no_line:
 	*out = NULL;
 
 return_final:
-	free(token.data);
+	delete[] token.data;
 	return res;
 }
 
 void
 parser_delete(struct parser *p)
 {
-	free(p->buffer);
-	free(p);
+	delete[] p->buffer;
+	delete p;
 }
