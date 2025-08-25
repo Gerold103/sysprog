@@ -25,7 +25,8 @@ struct chat_server {
 struct chat_server *
 chat_server_new(void)
 {
-	struct chat_server *server = calloc(1, sizeof(*server));
+	struct chat_server *server = new chat_server();
+	memset(server, 0, sizeof(*server));
 	server->socket = -1;
 
 	/* IMPLEMENT THIS FUNCTION */
@@ -41,7 +42,7 @@ chat_server_delete(struct chat_server *server)
 
 	/* IMPLEMENT THIS FUNCTION */
 
-	free(server);
+	delete server;
 }
 
 int

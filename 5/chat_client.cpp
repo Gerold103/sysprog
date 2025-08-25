@@ -1,6 +1,7 @@
 #include "chat.h"
 #include "chat_client.h"
 
+#include <cstring>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -20,7 +21,8 @@ chat_client_new(const char *name)
 	/* Ignore 'name' param if don't want to support it for +5 points. */
 	(void)name;
 
-	struct chat_client *client = calloc(1, sizeof(*client));
+	struct chat_client *client = new chat_client();
+	memset(client, 0, sizeof(*client));
 	client->socket = -1;
 
 	/* IMPLEMENT THIS FUNCTION */
@@ -36,7 +38,7 @@ chat_client_delete(struct chat_client *client)
 
 	/* IMPLEMENT THIS FUNCTION */
 
-	free(client);
+	delete client;
 }
 
 int

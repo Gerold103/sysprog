@@ -4,6 +4,7 @@
 #include "chat_server.h"
 
 #include <arpa/inet.h>
+#include <new>
 #include <pthread.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -23,8 +24,11 @@ test_msg_new(uint32_t len)
 {
 	len += TEST_MSG_ID_LEN;
 	uint32_t size = len + 1;
-	struct test_msg *res = malloc(sizeof(*res) + size);
-	res->data = (void *)(res + 1);
+	test_msg *res;
+	constexpr std::align_val_t alignment{alignof(test_msg)};
+	uint8_t *blob = new (alignment) uint8_t[sizeof(*res) + size];
+	res = (test_msg *)blob;
+	res->data = (char *)(res + 1);
 	res->len = len;
 	res->size = size;
 	memset(res->data, '0', TEST_MSG_ID_LEN);
@@ -39,7 +43,8 @@ test_msg_set_id(struct test_msg *msg, int cli_id, int msg_id)
 {
 	unit_fail_if(msg->len < TEST_MSG_ID_LEN);
 	memset(msg->data, '0', TEST_MSG_ID_LEN);
-	int rc = sprintf(msg->data, "cli_%d_msg_%d ", cli_id, msg_id);
+	int rc = snprintf(msg->data, msg->size, "cli_%d_msg_%d ",
+		cli_id, msg_id);
 	// Ignore terminating zero.
 	msg->data[rc] = '0';
 }
@@ -63,7 +68,7 @@ test_msg_check_data(const struct test_msg *msg, const char *data)
 static void
 test_msg_delete(struct test_msg *msg)
 {
-	free(msg);
+	delete[] (uint8_t *)msg;
 }
 
 static void
@@ -83,7 +88,7 @@ server_get_port(const struct chat_server *s)
 	unit_fail_if(sock < 0);
 	struct sockaddr_storage addr;
 	socklen_t len = sizeof(addr);
-	int rc = getsockname(sock, (void *)&addr, &len);
+	int rc = getsockname(sock, (sockaddr *)&addr, &len);
 	unit_fail_if(rc != 0);
 	if (addr.ss_family == AF_INET)
 		return ntohs(((struct sockaddr_in *)&addr)->sin_port);
@@ -95,7 +100,7 @@ static inline const char *
 make_addr_str(uint16_t port)
 {
 	static __thread char host[128];
-	sprintf(host, "localhost:%u", port);
+	snprintf(host, sizeof(host), "localhost:%u", port);
 	return host;
 }
 
@@ -349,10 +354,10 @@ test_multi_client(void)
 	struct chat_client *cli;
 
 	unit_msg("Connect clients");
-	struct chat_client **clis = malloc(client_count * sizeof(clis[0]));
+	struct chat_client **clis = new chat_client*[client_count];
 	for (int i = 0; i < client_count; ++i) {
 		char name[128];
-		sprintf(name, "cli_%d", i);
+		snprintf(name, sizeof(name), "cli_%d", i);
 		cli = chat_client_new(name);
 		unit_fail_if(chat_client_connect(
 			cli, make_addr_str(port)) != 0);
@@ -396,7 +401,7 @@ test_multi_client(void)
 	}
 	unit_msg("Check all is delivered");
 	test_msg_clear_id(test_msg);
-	int *msg_counts = calloc(client_count, sizeof(msg_counts[0]));
+	int *msg_counts = new int[client_count];
 	for (int i = 0, end = msg_count * client_count; i < end; ++i) {
 		msg = chat_server_pop_next(s);
 		unit_fail_if(msg == NULL);
@@ -409,7 +414,7 @@ test_multi_client(void)
 		++msg_counts[cli_id];
 
 		char name[128];
-		sprintf(name, "cli_%d", cli_id);
+		snprintf(name, sizeof(name), "cli_%d", cli_id);
 		test_msg_check_data(test_msg, msg->data);
 		unit_fail_if(!author_is_eq(msg, name));
 
@@ -431,7 +436,7 @@ test_multi_client(void)
 			++msg_counts[cli_id];
 
 			char name[128];
-			sprintf(name, "cli_%d", cli_id);
+			snprintf(name, sizeof(name), "cli_%d", cli_id);
 			test_msg_check_data(test_msg, msg->data);
 			unit_fail_if(!author_is_eq(msg, name));
 
@@ -441,8 +446,8 @@ test_multi_client(void)
 	}
 	for (int i = 0; i < client_count; ++i)
 		chat_client_delete(clis[i]);
-	free(clis);
-	free(msg_counts);
+	delete[] clis;
+	delete[] msg_counts;
 	chat_server_delete(s);
 	test_msg_delete(test_msg);
 
@@ -460,12 +465,12 @@ struct test_stress_ctx {
 static void *
 test_stress_worker_f(void *arg)
 {
-	struct test_stress_ctx *ctx = arg;
+	struct test_stress_ctx *ctx = (typeof(ctx))arg;
 	int thread_idx = __atomic_fetch_add(
 		&ctx->thread_idx, 1, __ATOMIC_RELAXED);
 	struct test_msg *test_msg = test_msg_new(ctx->msg_len);
 	char name[128];
-	sprintf(name, "cli_%d", thread_idx);
+	snprintf(name, sizeof(name), "cli_%d", thread_idx);
 	struct chat_client *cli = chat_client_new(name);
 	unit_fail_if(chat_client_connect(cli, make_addr_str(ctx->port)) != 0);
 	for (int i = 0; i < ctx->msg_count; ++i) {
@@ -506,7 +511,7 @@ test_stress(void)
 			test_stress_worker_f, &ctx);
 		unit_fail_if(rc != 0);
 	}
-	int *msg_counts = calloc(client_count, sizeof(msg_counts[0]));
+	int *msg_counts = new int[client_count];
 	struct test_msg *test_msg = test_msg_new(ctx.msg_len);
 	unit_msg("Receive all messages");
 	for (int i = 0, end = ctx.msg_count * client_count; i < end; ++i) {
@@ -525,13 +530,13 @@ test_stress(void)
 		++msg_counts[cli_id];
 
 		char name[128];
-		sprintf(name, "cli_%d", cli_id);
+		snprintf(name, sizeof(name), "cli_%d", cli_id);
 		test_msg_check_data(test_msg, msg->data);
 		unit_fail_if(!author_is_eq(msg, name));
 
 		chat_message_delete(msg);
 	}
-	free(msg_counts);
+	delete[] msg_counts;
 	test_msg_delete(test_msg);
 	unit_msg("Clean up the clients");
 	__atomic_store_n(&ctx.is_running, false, __ATOMIC_RELAXED);
@@ -552,12 +557,12 @@ test_big_author(void)
 	unit_test_start();
 
 	uint64_t author1_len = 10 * 1024 * 1024;
-	char *author1 = malloc(author1_len + 1);
+	char *author1 = new char[author1_len + 1];
 	memset(author1, 'z', author1_len);
 	author1[author1_len] = 0;
 
 	uint64_t author2_len = 11 * 1024 * 1024;
-	char *author2 = malloc(author2_len + 1);
+	char *author2 = new char[author2_len + 1];
 	memset(author2, 'y', author2_len);
 	author2[author2_len] = 0;
 
@@ -570,7 +575,7 @@ test_big_author(void)
 	unit_fail_if(chat_client_connect(c2, make_addr_str(port)) != 0);
 
 	uint64_t body_len = 20 * 1024 * 1024;
-	char *body = malloc(body_len + 1);
+	char *body = new char[body_len + 1];
 	memset(body, 'm', body_len);
 	body[body_len] = '\n';
 
@@ -588,9 +593,9 @@ test_big_author(void)
 	unit_check(author_is_eq(msg, author1), "msg author");
 	chat_message_delete(msg);
 
-	free(body);
-	free(author1);
-	free(author2);
+	delete[] body;
+	delete[] author1;
+	delete[] author2;
 	chat_client_delete(c1);
 	chat_client_delete(c2);
 	chat_server_delete(s);

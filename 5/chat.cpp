@@ -6,8 +6,8 @@
 void
 chat_message_delete(struct chat_message *msg)
 {
-	free(msg->data);
-	free(msg);
+	delete[] msg->data;
+	delete msg;
 }
 
 int
