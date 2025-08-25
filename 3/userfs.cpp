@@ -1,5 +1,8 @@
 #include "userfs.h"
+
 #include <stddef.h>
+#include <string>
+#include <vector>
 
 enum {
 	BLOCK_SIZE = 512,
@@ -11,9 +14,7 @@ static enum ufs_error_code ufs_error_code = UFS_ERR_NO_ERR;
 
 struct block {
 	/** Block memory. */
-	char *memory;
-	/** How many bytes are occupied. */
-	int occupied;
+	std::vector<char> memory;
 	/** Next block in the file. */
 	struct block *next;
 	/** Previous block in the file. */
@@ -33,7 +34,7 @@ struct file {
 	/** How many file descriptors are opened on the file. */
 	int refs;
 	/** File name. */
-	char *name;
+	std::string name;
 	/** Files are stored in a double-linked list. */
 	struct file *next;
 	struct file *prev;
