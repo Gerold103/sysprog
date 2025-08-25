@@ -101,7 +101,7 @@ test_push(void)
 	 * Re-push stress.
 	 */
 	const int count = 1000;
-	struct thread_task **tasks = malloc(sizeof(*tasks) * count);
+	struct thread_task **tasks = new thread_task*[count];
 	arg = 0;
 	for (int i = 0; i < count; ++i) {
 		struct thread_task **tp = &tasks[i];
@@ -124,7 +124,7 @@ test_push(void)
 		unit_fail_if(result != &arg);
 		unit_fail_if(thread_task_delete(t) != 0);
 	}
-	free(tasks);
+	delete[] tasks;
 	unit_fail_if(thread_pool_delete(p) != 0);
 
 	unit_test_finish();
@@ -197,7 +197,7 @@ test_thread_pool_max_tasks(void)
 	struct thread_pool *p;
 	int more_count = 10;
 	int total_count = more_count + TPOOL_MAX_TASKS;
-	struct thread_task **tasks = malloc(sizeof(*tasks) * total_count);
+	struct thread_task **tasks = new thread_task*[total_count];
 	unit_fail_if(thread_pool_new(5, &p) != 0);
 	/*
 	 * Push max tasks and join all.
@@ -247,7 +247,7 @@ test_thread_pool_max_tasks(void)
 		unit_fail_if(thread_task_delete(t) != 0);
 		unit_fail_if(result != &arg);
 	}
-	free(tasks);
+	delete[] tasks;
 	unit_fail_if(thread_pool_delete(p) != 0);
 
 	unit_test_finish();
