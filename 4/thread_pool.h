@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <stdbool.h>
 
 /**
@@ -21,7 +22,7 @@
 struct thread_pool;
 struct thread_task;
 
-typedef void *(*thread_task_f)(void *);
+using thread_task_f = std::function<void(void)>;
 
 enum {
 	TPOOL_MAX_THREADS = 20,
@@ -92,15 +93,14 @@ thread_pool_push_task(struct thread_pool *pool, struct thread_task *task);
  * Create a new task to push it into a pool.
  * @param[out] task Pointer to store result task object.
  * @param function Function to run by this task.
- * @param arg Argument for @a function.
  *
  * @retval Always 0.
  */
 int
-thread_task_new(struct thread_task **task, thread_task_f function, void *arg);
+thread_task_new(struct thread_task **task, const thread_task_f &function);
 
 /**
- * Check if @a task is finished and its result can be obtained.
+ * Check if @a task is finished and joined.
  * @param task Task to check.
  */
 bool
@@ -118,14 +118,13 @@ thread_task_is_running(const struct thread_task *task);
  * Note, this function does not delete task object. It can be
  * reused for a next task or deleted via thread_task_delete.
  * @param task Task to join.
- * @param[out] result Pointer to stored result of @a task.
  *
  * @retval 0 Success.
  * @retval != 0 Error code.
  *     - TPOOL_ERR_TASK_NOT_PUSHED - task is not pushed to a pool.
  */
 int
-thread_task_join(struct thread_task *task, void **result);
+thread_task_join(struct thread_task *task);
 
 #if NEED_TIMED_JOIN
 
@@ -134,7 +133,6 @@ thread_task_join(struct thread_task *task, void **result);
  * @param task Task to join.
  * @param timeout Timeout in seconds. 0 means no waiting at all. For an infinite
  *   timeout pass infinity or DBL_MAX or just something huge.
- * @param[out] result Pointer to stored result of @a task.
  *
  * @retval 0 Success.
  * @retval != 0 Error code.
@@ -142,7 +140,7 @@ thread_task_join(struct thread_task *task, void **result);
  *     - TPOOL_ERR_TIMEOUT - join timed out, nothing is done.
  */
 int
-thread_task_timed_join(struct thread_task *task, double timeout, void **result);
+thread_task_timed_join(struct thread_task *task, double timeout);
 
 #endif
 

@@ -3,7 +3,6 @@
 
 struct thread_task {
 	thread_task_f function;
-	void *arg;
 
 	/* PUT HERE OTHER MEMBERS */
 };
@@ -49,12 +48,11 @@ thread_pool_push_task(struct thread_pool *pool, struct thread_task *task)
 }
 
 int
-thread_task_new(struct thread_task **task, thread_task_f function, void *arg)
+thread_task_new(struct thread_task **task, const thread_task_f &function)
 {
 	/* IMPLEMENT THIS FUNCTION */
 	(void)task;
 	(void)function;
-	(void)arg;
 	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
@@ -75,23 +73,21 @@ thread_task_is_running(const struct thread_task *task)
 }
 
 int
-thread_task_join(struct thread_task *task, void **result)
+thread_task_join(struct thread_task *task)
 {
 	/* IMPLEMENT THIS FUNCTION */
 	(void)task;
-	(void)result;
 	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
 #if NEED_TIMED_JOIN
 
 int
-thread_task_timed_join(struct thread_task *task, double timeout, void **result)
+thread_task_timed_join(struct thread_task *task, double timeout)
 {
 	/* IMPLEMENT THIS FUNCTION */
 	(void)task;
 	(void)timeout;
-	(void)result;
 	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
 
