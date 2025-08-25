@@ -7,7 +7,7 @@
 
 struct chat_client {
 	/** Socket connected to the server. */
-	int socket;
+	int socket = -1;
 	/** Array of received messages. */
 	/* ... */
 	/** Output buffer. */
@@ -16,18 +16,12 @@ struct chat_client {
 };
 
 struct chat_client *
-chat_client_new(const char *name)
+chat_client_new(std::string_view name)
 {
 	/* Ignore 'name' param if don't want to support it for +5 points. */
 	(void)name;
-
-	struct chat_client *client = new chat_client();
-	memset(client, 0, sizeof(*client));
-	client->socket = -1;
-
 	/* IMPLEMENT THIS FUNCTION */
-
-	return client;
+	return new chat_client();
 }
 
 void
@@ -42,7 +36,7 @@ chat_client_delete(struct chat_client *client)
 }
 
 int
-chat_client_connect(struct chat_client *client, const char *addr)
+chat_client_connect(struct chat_client *client, std::string_view addr)
 {
 	/*
 	 * 1) Use getaddrinfo() to resolve addr to struct sockaddr_in.

@@ -57,12 +57,9 @@ test_msg_clear_id(struct test_msg *msg)
 }
 
 static void
-test_msg_check_data(const struct test_msg *msg, const char *data)
+test_msg_check_data(const struct test_msg *msg, std::string_view data)
 {
-	uint32_t len = strlen(data);
-	unit_fail_if(len != msg->len);
-	unit_fail_if(len < TEST_MSG_ID_LEN);
-	unit_fail_if(memcmp(msg->data, data, len) != 0);
+	unit_assert(data == std::string_view(msg->data, msg->len));
 }
 
 static void
@@ -74,11 +71,10 @@ test_msg_delete(struct test_msg *msg)
 static void
 chat_message_extract_id(struct chat_message *msg, int *cli_id, int *msg_id)
 {
-	uint32_t len = strlen(msg->data);
-	unit_fail_if(len < TEST_MSG_ID_LEN);
-	int rc = sscanf(msg->data, "cli_%d_msg_%d ", cli_id, msg_id);
+	unit_fail_if(msg->data.size() < TEST_MSG_ID_LEN);
+	int rc = sscanf(msg->data.c_str(), "cli_%d_msg_%d ", cli_id, msg_id);
 	unit_fail_if(rc != 2);
-	memset(msg->data, '0', TEST_MSG_ID_LEN);
+	memset(msg->data.data(), '0', TEST_MSG_ID_LEN);
 }
 
 static uint16_t
@@ -145,10 +141,10 @@ client_pop_next_blocking(struct chat_client *c, struct chat_server *s)
 }
 
 static bool
-author_is_eq(const struct chat_message *msg, const char *name)
+author_is_eq(const struct chat_message *msg, std::string_view name)
 {
 #if NEED_AUTHOR
-	return strcmp(msg->author, name) == 0;
+	return msg->author == name;
 #else
 	(void)msg;
 	(void)name;
@@ -218,9 +214,9 @@ test_basic(void)
 	server_consume_events(s);
 	struct chat_message *msg = chat_server_pop_next(s);
 	unit_check(msg != NULL, "server got msg");
-	unit_check(strcmp(msg->data, "hello") == 0, "msg data");
+	unit_check(msg->data == "hello", "msg data");
 	unit_check(author_is_eq(msg, "c1"), "msg author");
-	chat_message_delete(msg);
+	delete msg;
 	//
 	// Send a non-zero terminated message.
 	//
@@ -230,9 +226,9 @@ test_basic(void)
 	client_consume_events(c1);
 	server_consume_events(s);
 	msg = chat_server_pop_next(s);
-	unit_check(strcmp(msg->data, "msg1") == 0, "msg data");
+	unit_check(msg->data == "msg1", "msg data");
 	unit_check(author_is_eq(msg, "c1"), "msg author");
-	chat_message_delete(msg);
+	delete msg;
 	unit_check(chat_server_pop_next(s) == NULL, "no more messages");
 	chat_client_delete(c1);
 	chat_server_delete(s);
@@ -268,7 +264,7 @@ test_big_messages(void)
 			++real_count;
 			test_msg_check_data(test_msg, msg->data);
 			unit_fail_if(!author_is_eq(msg, "c1"));
-			chat_message_delete(msg);
+			delete msg;
 		}
 	}
 	while (true) {
@@ -280,7 +276,7 @@ test_big_messages(void)
 			++real_count;
 			test_msg_check_data(test_msg, msg->data);
 			unit_fail_if(!author_is_eq(msg, "c1"));
-			chat_message_delete(msg);
+			delete msg;
 		}
 		if (rc1 == CHAT_ERR_TIMEOUT && rc2 == CHAT_ERR_TIMEOUT)
 			break;
@@ -313,13 +309,13 @@ test_multi_feed(void)
 	client_consume_events(c1);
 	server_consume_events(s);
 	struct chat_message *msg = chat_server_pop_next(s);
-	unit_check(strcmp(msg->data, "msg1") == 0, "msg1");
+	unit_check(msg->data == "msg1", "msg1");
 	unit_check(author_is_eq(msg, "c1"), "msg1 author");
-	chat_message_delete(msg);
+	delete msg;
 	msg = chat_server_pop_next(s);
-	unit_check(strcmp(msg->data, "msg2") == 0, "msg2");
+	unit_check(msg->data == "msg2", "msg2");
 	unit_check(author_is_eq(msg, "c1"), "msg2 author");
-	chat_message_delete(msg);
+	delete msg;
 	unit_check(chat_server_pop_next(s) == NULL, "waiting for msg3");
 	unit_check(chat_client_feed(c1, "345", 3) == 0, "feed next part");
 	client_consume_events(c1);
@@ -329,9 +325,9 @@ test_multi_feed(void)
 	client_consume_events(c1);
 	server_consume_events(s);
 	msg = chat_server_pop_next(s);
-	unit_check(strcmp(msg->data, "msg345678") == 0, "msg3");
+	unit_check(msg->data == "msg345678", "msg3");
 	unit_check(author_is_eq(msg, "c1"), "msg3 author");
-	chat_message_delete(msg);
+	delete msg;
 	chat_client_delete(c1);
 	chat_server_delete(s);
 
@@ -368,13 +364,13 @@ test_multi_client(void)
 	cli = clis[client_count - 1];
 	unit_fail_if(chat_client_feed(cli, "hello\n", 6) != 0);
 	msg = server_pop_next_blocking_from(s, cli);
-	unit_fail_if(strcmp(msg->data, "hello") != 0);
-	chat_message_delete(msg);
+	unit_fail_if(msg->data != "hello");
+	delete msg;
 	for (int i = 0; i < client_count - 1; ++i) {
 		cli = clis[i];
 		msg = client_pop_next_blocking(cli, s);
-		unit_fail_if(strcmp(msg->data, "hello") != 0);
-		chat_message_delete(msg);
+		unit_fail_if(msg->data != "hello");
+		delete msg;
 	}
 	unit_msg("Send messages");
 	for (int mi = 0; mi < msg_count; ++mi) {
@@ -418,7 +414,7 @@ test_multi_client(void)
 		test_msg_check_data(test_msg, msg->data);
 		unit_fail_if(!author_is_eq(msg, name));
 
-		chat_message_delete(msg);
+		delete msg;
 	}
 	for (int ci = 0; ci < client_count; ++ci) {
 		memset(msg_counts, 0, client_count * sizeof(msg_counts[0]));
@@ -440,7 +436,7 @@ test_multi_client(void)
 			test_msg_check_data(test_msg, msg->data);
 			unit_fail_if(!author_is_eq(msg, name));
 
-			chat_message_delete(msg);
+			delete msg;
 		}
 		unit_fail_if(msg_counts[ci] != 0);
 	}
@@ -534,7 +530,7 @@ test_stress(void)
 		test_msg_check_data(test_msg, msg->data);
 		unit_fail_if(!author_is_eq(msg, name));
 
-		chat_message_delete(msg);
+		delete msg;
 	}
 	delete[] msg_counts;
 	test_msg_delete(test_msg);
@@ -557,14 +553,10 @@ test_big_author(void)
 	unit_test_start();
 
 	uint64_t author1_len = 10 * 1024 * 1024;
-	char *author1 = new char[author1_len + 1];
-	memset(author1, 'z', author1_len);
-	author1[author1_len] = 0;
+	std::string author1(author1_len, 'z');
 
 	uint64_t author2_len = 11 * 1024 * 1024;
-	char *author2 = new char[author2_len + 1];
-	memset(author2, 'y', author2_len);
-	author2[author2_len] = 0;
+	std::string author2(author2_len, 'y');
 
 	struct chat_server *s = chat_server_new();
 	unit_fail_if(chat_server_listen(s, 0) != 0);
@@ -575,27 +567,23 @@ test_big_author(void)
 	unit_fail_if(chat_client_connect(c2, make_addr_str(port)) != 0);
 
 	uint64_t body_len = 20 * 1024 * 1024;
-	char *body = new char[body_len + 1];
-	memset(body, 'm', body_len);
-	body[body_len] = '\n';
+	std::string body(body_len + 1, 'm');
+	body.back() = '\n';
 
 	unit_check(chat_client_feed(c1, body, body_len + 1) == 0, "feed to client");
 	struct chat_message *msg = server_pop_next_blocking_from(s, c1);
 	unit_check(msg != NULL, "server got msg");
-	body[body_len] = 0;
-	unit_check(strcmp(msg->data, body) == 0, "msg data");
+	body.resize(body_len);
+	unit_check(msg->data == body, "msg data");
 	unit_check(author_is_eq(msg, author1), "msg author");
-	chat_message_delete(msg);
+	delete msg;
 
 	msg = client_pop_next_blocking(c2, s);
 	unit_check(msg != NULL, "other client got msg");
-	unit_check(strcmp(msg->data, body) == 0, "msg data");
+	unit_check(msg->data == body, "msg data");
 	unit_check(author_is_eq(msg, author1), "msg author");
-	chat_message_delete(msg);
+	delete msg;
 
-	delete[] body;
-	delete[] author1;
-	delete[] author2;
 	chat_client_delete(c1);
 	chat_client_delete(c2);
 	chat_server_delete(s);
@@ -626,27 +614,27 @@ test_server_feed(void)
 
 	struct chat_message *msg = client_pop_next_blocking(c1, s);
 	unit_check(msg != NULL, "c1 got msg");
-	unit_check(strcmp(msg->data, "msg1") == 0, "msg1");
+	unit_check(msg->data == "msg1", "msg1");
 	unit_check(author_is_eq(msg, "server"), "msg1 author");
-	chat_message_delete(msg);
+	delete msg;
 
 	msg = client_pop_next_blocking(c1, s);
 	unit_check(msg != NULL, "c1 got msg");
-	unit_check(strcmp(msg->data, "msg2") == 0, "msg2");
+	unit_check(msg->data == "msg2", "msg2");
 	unit_check(author_is_eq(msg, "server"), "msg2 author");
-	chat_message_delete(msg);
+	delete msg;
 
 	msg = client_pop_next_blocking(c2, s);
 	unit_check(msg != NULL, "c2 got msg");
-	unit_check(strcmp(msg->data, "msg1") == 0, "msg1");
+	unit_check(msg->data == "msg1", "msg1");
 	unit_check(author_is_eq(msg, "server"), "msg1 author");
-	chat_message_delete(msg);
+	delete msg;
 
 	msg = client_pop_next_blocking(c2, s);
 	unit_check(msg != NULL, "c2 got msg");
-	unit_check(strcmp(msg->data, "msg2") == 0, "msg2");
+	unit_check(msg->data == "msg2", "msg2");
 	unit_check(author_is_eq(msg, "server"), "msg2 author");
-	chat_message_delete(msg);
+	delete msg;
 
 	unit_check(chat_client_update(c1, 0) == CHAT_ERR_TIMEOUT,
 		   "no more events in c1");
@@ -659,15 +647,15 @@ test_server_feed(void)
 
 	msg = client_pop_next_blocking(c1, s);
 	unit_check(msg != NULL, "c1 got msg");
-	unit_check(strcmp(msg->data, "msg3") == 0, "msg3");
+	unit_check(msg->data == "msg3", "msg3");
 	unit_check(author_is_eq(msg, "server"), "msg3 author");
-	chat_message_delete(msg);
+	delete msg;
 
 	msg = client_pop_next_blocking(c2, s);
 	unit_check(msg != NULL, "c2 got msg");
-	unit_check(strcmp(msg->data, "msg3") == 0, "msg3");
+	unit_check(msg->data == "msg3", "msg3");
 	unit_check(author_is_eq(msg, "server"), "msg3 author");
-	chat_message_delete(msg);
+	delete msg;
 
 	unit_check(chat_client_update(c1, 0) == CHAT_ERR_TIMEOUT,
 		   "no more events in c1");

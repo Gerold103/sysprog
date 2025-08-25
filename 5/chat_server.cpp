@@ -16,7 +16,7 @@ struct chat_peer {
 
 struct chat_server {
 	/** Listening socket. To accept new clients. */
-	int socket;
+	int socket = -1;
 	/** Array of peers. */
 	/* ... */
 	/* PUT HERE OTHER MEMBERS */
@@ -25,13 +25,8 @@ struct chat_server {
 struct chat_server *
 chat_server_new(void)
 {
-	struct chat_server *server = new chat_server();
-	memset(server, 0, sizeof(*server));
-	server->socket = -1;
-
 	/* IMPLEMENT THIS FUNCTION */
-
-	return server;
+	return new chat_server();
 }
 
 void

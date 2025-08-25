@@ -63,11 +63,11 @@ main(int argc, char **argv)
 		struct chat_message *msg;
 		while ((msg = chat_server_pop_next(serv)) != NULL) {
 #if NEED_AUTHOR
-			printf("%s: %s\n", msg->author, msg->data);
+			printf("%s: %s\n", msg->author.c_str(), msg->data.c_str());
 #else
-			printf("%s\n", msg->data);
+			printf("%s\n", msg->data.c_str());
 #endif
-			chat_message_delete(msg);
+			delete msg;
 		}
 	}
 #endif

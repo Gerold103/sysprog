@@ -1,14 +1,6 @@
 #include "chat.h"
 
 #include <poll.h>
-#include <stdlib.h>
-
-void
-chat_message_delete(struct chat_message *msg)
-{
-	delete[] msg->data;
-	delete msg;
-}
 
 int
 chat_events_to_poll_events(int mask)

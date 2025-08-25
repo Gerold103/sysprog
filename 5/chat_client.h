@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string_view>
 
 struct chat_client;
 
@@ -9,7 +10,7 @@ struct chat_client;
  * initialize it.
  */
 struct chat_client *
-chat_client_new(const char *name);
+chat_client_new(std::string_view name);
 
 /** Free all client's resources. */
 void
@@ -29,7 +30,7 @@ chat_client_delete(struct chat_client *client);
  *     - CHAT_ERR_SYS - a system error, check errno.
  */
 int
-chat_client_connect(struct chat_client *client, const char *addr);
+chat_client_connect(struct chat_client *client, std::string_view addr);
 
 /**
  * Pop a next pending chat message. The returned message has to be

@@ -16,6 +16,8 @@
 #define NEED_AUTHOR 0
 #define NEED_SERVER_FEED 0
 
+#include <string>
+
 enum chat_errcode {
 	CHAT_ERR_INVALID_ARGUMENT = 1,
 	CHAT_ERR_TIMEOUT,
@@ -35,17 +37,13 @@ enum chat_events {
 struct chat_message {
 #if NEED_AUTHOR
 	/** Author's name. */
-	const char *author;
+	std::string author;
 #endif
 	/** 0-terminate text. */
-	char *data;
+	std::string data;
 
 	/* PUT HERE OTHER MEMBERS */
 };
-
-/** Free message's memory. */
-void
-chat_message_delete(struct chat_message *msg);
 
 /** Convert chat_events mask to events suitable for poll(). */
 int
