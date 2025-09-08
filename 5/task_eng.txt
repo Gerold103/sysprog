@@ -87,7 +87,9 @@ I am client-2!          I am client-2!          I am client-2!
   Usage of EPOLL_CTL_MOD is not allowed. Usage of
   EPOLL_CTL_ADD/DEL to simulate MOD is also not allowed. A socket
   must be added to epoll once when created, and deleted before
-  being closed.
+  being closed. This specifically means you **can't** use
+  epoll_ctl() on the same socket more than 2 times - to add it and
+  to delete from the epoll. Same about kqueue.
 
 - When kqueue is used, you have to use EV_CLEAR. All the same
   restrictions apply same as with epoll. That is, you can't add
