@@ -29,7 +29,7 @@ enum {
 	TPOOL_MAX_TASKS = 100000,
 };
 
-enum thread_poool_errcode {
+enum thread_pool_errcode {
 	TPOOL_ERR_INVALID_ARGUMENT = 1,
 	TPOOL_ERR_TOO_MANY_TASKS,
 	TPOOL_ERR_HAS_TASKS,
