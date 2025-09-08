@@ -1,5 +1,7 @@
 #include "userfs.h"
 
+#include "rlist.h"
+
 #include <stddef.h>
 #include <string>
 #include <vector>
@@ -10,43 +12,43 @@ enum {
 };
 
 /** Global error code. Set from any function on any error. */
-static enum ufs_error_code ufs_error_code = UFS_ERR_NO_ERR;
+static ufs_error_code ufs_error_code = UFS_ERR_NO_ERR;
 
 struct block {
 	/** Block memory. */
-	std::vector<char> memory;
-	/** Next block in the file. */
-	struct block *next;
-	/** Previous block in the file. */
-	struct block *prev;
+	char memory[BLOCK_SIZE];
+	/** A link in the block list of the owner-file. */
+	rlist in_block_list = RLIST_LINK_INITIALIZER;
 
 	/* PUT HERE OTHER MEMBERS */
 };
 
 struct file {
-	/** Double-linked list of file blocks. */
-	struct block *block_list;
 	/**
-	 * Last block in the list above for fast access to the end
-	 * of file.
+	 * Doubly-linked intrusive list of file blocks. Intrusiveness of the
+	 * list gives you the full control over the lifetime of the items in the
+	 * list without having to use double pointers with performance penalty.
 	 */
-	struct block *last_block;
+	rlist blocks = RLIST_HEAD_INITIALIZER(blocks);
 	/** How many file descriptors are opened on the file. */
-	int refs;
+	int refs = 0;
 	/** File name. */
 	std::string name;
-	/** Files are stored in a double-linked list. */
-	struct file *next;
-	struct file *prev;
+	/** A link in the global file list. */
+	rlist in_file_list = RLIST_LINK_INITIALIZER;
 
 	/* PUT HERE OTHER MEMBERS */
 };
 
-/** List of all files. */
-static struct file *file_list = NULL;
+/**
+ * Intrusive list of all files. In this case the intrusiveness of the list also
+ * grants the ability to remove items from any position in O(1) complexity
+ * without having to know their iterator.
+ */
+static rlist file_list = RLIST_HEAD_INITIALIZER(file_list);
 
 struct filedesc {
-	struct file *file;
+	file *file;
 
 	/* PUT HERE OTHER MEMBERS */
 };
@@ -57,9 +59,7 @@ struct filedesc {
  * closed, its place in this array is set to NULL and can be
  * taken by next ufs_open() call.
  */
-static struct filedesc **file_descriptors = NULL;
-static int file_descriptor_count = 0;
-static int file_descriptor_capacity = 0;
+static std::vector<filedesc*> file_descriptors;
 
 enum ufs_error_code
 ufs_errno()
@@ -75,8 +75,6 @@ ufs_open(const char *filename, int flags)
 	(void)flags;
 	(void)file_list;
 	(void)file_descriptors;
-	(void)file_descriptor_count;
-	(void)file_descriptor_capacity;
 	ufs_error_code = UFS_ERR_NOT_IMPLEMENTED;
 	return -1;
 }
@@ -138,4 +136,13 @@ ufs_resize(int fd, size_t new_size)
 void
 ufs_destroy(void)
 {
+	/*
+	 * The file_descriptors array is likely to leak even if
+	 * you resize it to zero or call clear(). This is because
+	 * the vector keeps memory reserved in case more elements
+	 * would be added.
+	 *
+	 * The recommended way of freeing the memory is to swap()
+	 * the vector with a temporary empty vector.
+	 */
 }

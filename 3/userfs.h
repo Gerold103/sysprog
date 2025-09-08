@@ -34,25 +34,23 @@ enum open_flags {
 	 * If the flag specified and a file does not exist -
 	 * create it.
 	 */
-	UFS_CREATE = 1,
+	UFS_CREATE = 0b0001,
 
 #if NEED_OPEN_FLAGS
-
 	/**
 	 * With this flag it is allowed to only read the file.
 	 */
-	UFS_READ_ONLY = 2,
+	UFS_READ_ONLY = 0b0010,
 	/**
 	 * With this flag it is allowed to only write into the
 	 * file.
 	 */
-	UFS_WRITE_ONLY = 4,
+	UFS_WRITE_ONLY = 0b0100,
 	/**
 	 * With this flag it is allowed to both read and write
 	 * into the file.
 	 */
-	UFS_READ_WRITE = 8,
-
+	UFS_READ_WRITE = UFS_READ_ONLY | UFS_WRITE_ONLY,
 #endif
 };
 
@@ -64,13 +62,12 @@ enum ufs_error_code {
 	UFS_ERR_NOT_IMPLEMENTED,
 
 #if NEED_OPEN_FLAGS
-
 	UFS_ERR_NO_PERMISSION,
 #endif
 };
 
 /** Get code of the last error. */
-enum ufs_error_code
+ufs_error_code
 ufs_errno();
 
 /**
