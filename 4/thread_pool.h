@@ -75,7 +75,9 @@ int
 thread_pool_delete(struct thread_pool *pool);
 
 /**
- * Push @a task into thread pool queue.
+ * Push @a task into thread pool queue. The task must not be
+ * already pushed or deleted - otherwise this is undefined
+ * behaviour.
  * @param pool Pool to push into.
  * @param task Task to push.
  *
