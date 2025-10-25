@@ -23,34 +23,32 @@ futex_wait(int *val, int old)
 }
 
 struct condvar {
-	int value;
-	int prev;
+	int sequence;
 };
 
 static void
 condvar_signal(struct condvar *cond)
 {
-	int old = __atomic_load_n(&cond->prev, __ATOMIC_RELAXED);
-	__atomic_store_n(&cond->value, old + 1, __ATOMIC_RELEASE);
-	futex_wake(&cond->value);
+	__atomic_add_fetch(&cond->sequence, 1, __ATOMIC_RELEASE);
+	futex_wake(&cond->sequence);
 }
 
 static void
-condvar_wait(struct condvar *cond, pthread_mutex_t *mutex)
+condvar_wait(struct condvar *cond)
 {
-	int old = __atomic_load_n(&cond->value, __ATOMIC_ACQUIRE);
-	__atomic_store_n(&cond->prev, old, __ATOMIC_RELAXED);
-
-	pthread_mutex_unlock(mutex);
-	futex_wait(&cond->value, old);
-	pthread_mutex_lock(mutex);
+	// This will deadlock, because will miss 'signal()' sometimes.
+	// Uncomment the next line to increase the likelyhood.
+	//
+	// usleep(100);
+	//
+	int old = __atomic_load_n(&cond->sequence, __ATOMIC_ACQUIRE);
+	futex_wait(&cond->sequence, old);
 }
 
 static void
 condvar_create(struct condvar *cond)
 {
-	cond->value = 0;
-	cond->prev = 0;
+	cond->sequence = 0;
 }
 
 struct state {
@@ -75,8 +73,11 @@ thread_send_f(void *arg)
 
 	pthread_mutex_lock(&state->mutex);
 	while (state->counter_send < state->target) {
-		while (state->counter_send > state->counter_recv)
-			condvar_wait(&state->send_cond, &state->mutex);
+		while (state->counter_send > state->counter_recv) {
+			pthread_mutex_unlock(&state->mutex);
+			condvar_wait(&state->send_cond);
+			pthread_mutex_lock(&state->mutex);
+		}
 		++state->counter_send;
 		printf("send %d: sent %d\n", tid, state->counter_send);
 		condvar_signal(&state->recv_cond);
@@ -93,8 +94,11 @@ thread_recv_f(void *arg)
 
 	pthread_mutex_lock(&state->mutex);
 	while (state->counter_recv < state->target) {
-		while (state->counter_send == state->counter_recv)
-			condvar_wait(&state->recv_cond, &state->mutex);
+		while (state->counter_send == state->counter_recv) {
+			pthread_mutex_unlock(&state->mutex);
+			condvar_wait(&state->recv_cond);
+			pthread_mutex_lock(&state->mutex);
+		}
 		assert(state->counter_send == state->counter_recv + 1);
 		++state->counter_recv;
 		printf("recv %d: received %d\n", tid, state->counter_recv);

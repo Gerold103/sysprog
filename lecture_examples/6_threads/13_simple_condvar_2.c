@@ -23,34 +23,32 @@ futex_wait(int *val, int old)
 }
 
 struct condvar {
-	int value;
-	int prev;
+	int sequence;
 };
 
 static void
 condvar_signal(struct condvar *cond)
 {
-	int old = __atomic_load_n(&cond->prev, __ATOMIC_RELAXED);
-	__atomic_store_n(&cond->value, old + 1, __ATOMIC_RELEASE);
-	futex_wake(&cond->value);
+	// This will break if called enough times to overflow the sequence
+	/// while wait() has unlocked the mutex, but didn't start waiting yet.
+	// Too long to reproduce though.
+	__atomic_add_fetch(&cond->sequence, 1, __ATOMIC_RELEASE);
+	futex_wake(&cond->sequence);
 }
 
 static void
 condvar_wait(struct condvar *cond, pthread_mutex_t *mutex)
 {
-	int old = __atomic_load_n(&cond->value, __ATOMIC_ACQUIRE);
-	__atomic_store_n(&cond->prev, old, __ATOMIC_RELAXED);
-
+	int old = __atomic_load_n(&cond->sequence, __ATOMIC_ACQUIRE);
 	pthread_mutex_unlock(mutex);
-	futex_wait(&cond->value, old);
+	futex_wait(&cond->sequence, old);
 	pthread_mutex_lock(mutex);
 }
 
 static void
 condvar_create(struct condvar *cond)
 {
-	cond->value = 0;
-	cond->prev = 0;
+	cond->sequence = 0;
 }
 
 struct state {
