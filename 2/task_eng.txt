@@ -1,6 +1,6 @@
 ------------------------------------------------------------------
 Shell.
-Language: С.
+Language: С/C++
 Deadline: 3 weeks.
 Complexity: ~15 hours on average, 350 lines of code.
 ------------------------------------------------------------------
@@ -19,17 +19,18 @@ console. It should take lines like this:
 and execute them by calling 'command_name' with the given
 parameters. So be a terminal, basically.
 
-The files parser.h and parser.c already implement a command parser
-for you. You are free to use the given parser or implement your
-own or take some other one.
+The files parser.h and parser.cpp already implement a command
+parser for you. You are free to use the given parser or implement
+your own or take some other one.
 
-The file parser_test.c can be ignored. It is just used for testing
-the parser itself. You don't have to submit it, and don't need to
-look at it unless you want to just see some examples of how it
-works.
+The file parser_test.cpp can be ignored. It is just used for
+testing the parser itself. You don't have to submit it, and don't
+need to look at it unless you want to just see some examples of
+how it works.
 
-The only file of interest for you is solution.c which contains the
-solution template. But you are free to add more files if needed.
+The only file of interest for you is solution.cpp which contains
+the solution template. But you are free to add more files if
+needed.
 
 The behaviour of your terminate must replicate Bash to the letter.
 At least in the aspects required by the task and tests.
@@ -82,9 +83,9 @@ At least in the aspects required by the task and tests.
 - Global variables are not allowed (except for the already
   existing ones).
 
-- Memory leaks are not allowed. To check them you can use
-  utils/heap_help tool. Showing zero leak reports from Valgrind or
-  ASAN is not enough - they often miss the leaks.
+- Memory leaks are not allowed. To check them you can build with
+  the cmake option `ENABLE_LEAK_CHECKS`. Showing zero leak reports
+  from Valgrind or ASAN is not enough - they often miss the leaks.
 
 - Length of command line input is not limited, so you can't read
   it into a buffer of a fixed size. But each line obviously fits
@@ -106,7 +107,10 @@ At least in the aspects required by the task and tests.
 - You don't need to support '~' nor '-' paths in 'cd' command.
 
 - You can use an already existing parser defined in parser.h and
-  .c files, with usage shown in solution.c.
+  .cpp files, with usage shown in solution.cpp.
+
+- You can assume, that memory allocation functions like
+  new/delete/malloc()/realloc()/calloc() never fail.
 
 ----------------------- Possible solutions -----------------------
 
@@ -211,7 +215,7 @@ Input examples:
 
 ----------------------- Advices and hints ------------------------
 
-- Try to implement a simple main.c file with just one hardcoded
+- Try to implement a simple main.cpp file with just one hardcoded
   command being executed with fork() + exec...().
 
   Then try to extend it. For example, connect 2 hardcoded

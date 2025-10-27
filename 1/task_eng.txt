@@ -1,6 +1,6 @@
 ------------------------------------------------------------------
 Coroutine messaging system
-Language: С.
+Language: С/C++
 Deadline: 3 weeks.
 Complexity: ~10 hours on average, 500 lines of code.
 ------------------------------------------------------------------
@@ -35,13 +35,13 @@ tries to send a message into the channel and the size limit is
 reached, the coroutine must be suspended until there is space in
 the channel.
 
-The tests are in test.c. The implementation template is in
-corobus.h and corobus.c. The coroutines API is in libcoro.h. The
+The tests are in test.cpp. The implementation template is in
+corobus.h and corobus.cpp. The coroutines API is in libcoro.h. The
 other files you don't need to work with. Except for when want to
 check out the internals of the tests or of the coroutines. For
-example, libcoro_test.c just tests the coroutines engine. The task
-doesn't require to change anything in that engine. Just use the
-API.
+example, libcoro_test.cpp just tests the coroutines engine. The
+task doesn't require to change anything in that engine. Just use
+the API.
 
 ----------------------------- Rules ------------------------------
 
@@ -58,15 +58,16 @@ API.
 - Global variables are not allowed (except for the already
   existing ones).
 
-- Memory leaks are not allowed. To check them you can use
-  utils/heap_help tool. Showing zero leak reports from Valgrind or
-  ASAN is not enough - they often miss the leaks.
+- Memory leaks are not allowed. To check them you can build with
+  the cmake option `ENABLE_LEAK_CHECKS`. Showing zero leak reports
+  from Valgrind or ASAN is not enough - they often miss the leaks.
 
-- Can not change test.c, libcoro.c, libcoro.h.
+- Can not change test.cpp, libcoro.cpp, libcoro.h.
 
 -------------------------- Relaxations ---------------------------
 
-- You can assume, that malloc()/realloc()/calloc() never fail.
+- You can assume, that memory allocation functions like
+  new/delete/malloc()/realloc()/calloc() never fail.
 
 - Use can use intrusive list container defined in utils/rlist.h.
 
@@ -146,9 +147,9 @@ The options available for this task are:
 
 ----------------------- Advices and hints ------------------------
 
-- Try to inspect the libcoro_test.c and test.c to see how the
-  coroutines are used. Try to run libcoro_test.c, add some prints,
-  use a debugger, to see how what works.
+- Try to inspect the libcoro_test.cpp and test.cpp to see how the
+  coroutines are used. Try to run libcoro_test.cpp, add some
+  prints, use a debugger, to see how what works.
 
 - Read libcoro.h to see what kind of API you have available. See
   what could be used in your solutions for which things.

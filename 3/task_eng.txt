@@ -1,6 +1,6 @@
 ------------------------------------------------------------------
 File system.
-Language: C.
+Language: С/C++
 Deadline: 3 weeks.
 Complexity: ~7 hours on average, 520 lines of code.
 ------------------------------------------------------------------
@@ -14,12 +14,12 @@ points out the common mistakes, and suggests bonus tasks.
 Need to implement own file system in memory. Don't be afraid, it
 is not too complex. For start you are given a template of the FS
 interface with some pre-implemented structures, in files userfs.h
-and userfs.c.
+and userfs.cpp.
 
 The file system is called UserFS, and it is very primitive. It has
 no folders - all files are in "root". Files can be created,
 deleted, opened, closed. Each file's structure is similar to the
-file system FAT: it is a block list. In userfs.c you can look up
+file system FAT: it is a block list. In userfs.cpp you can look up
 structures which describe a block and a file storing a list of
 blocks.
 
@@ -50,14 +50,14 @@ in the comments in userfs.h.
 - Global variables are not allowed (except for the already
   existing ones).
 
-- Memory leaks are not allowed. To check them you can use
-  utils/heap_help tool. Showing zero leak reports from Valgrind or
-  ASAN is not enough - they often miss the leaks.
+- Memory leaks are not allowed. To check them you can build with
+  the cmake option `ENABLE_LEAK_CHECKS`. Showing zero leak reports
+  from Valgrind or ASAN is not enough - they often miss the leaks.
 
 -------------------------- Relaxations ---------------------------
 
-- Can assume that all the data fits into the main memory and
-  memory allocation functions (like malloc()) never fail.
+- You can assume, that memory allocation functions like
+  new/delete/malloc()/realloc()/calloc() never fail.
 
 ----------------------- Possible solutions -----------------------
 
@@ -150,7 +150,7 @@ There is code:
 
         int fd = ufs_open("any_file_name", UFS_CREATE);
 
-After this line inside userfs.c is created a struct file with a
+After this line inside userfs.cpp is created a struct file with a
 name "any_file_name", if it doesn't exist yet. Then is created a
 file descriptor struct filedesc.
 

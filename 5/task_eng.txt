@@ -1,6 +1,6 @@
 ------------------------------------------------------------------
 Game lobby chat.
-Language: C.
+Language: С/C++
 Deadline: 3 weeks.
 Complexity: ~15 hours on average, 1100 lines of code.
 ------------------------------------------------------------------
@@ -19,7 +19,7 @@ to all the clients via this server. So the server is like a game
 lobby. Everyone reads all messages from all the others and the
 messages are not persisted anyhow.
 
-In the attached .h and .c files you can find templates of
+In the attached .h and .cpp files you can find templates of
 functions and structures which need to be implemented.
 
 A usage example of the exe files is that you start a server,
@@ -54,9 +54,9 @@ I am client-2!          I am client-2!          I am client-2!
 - Global variables are not allowed (except for the already
   existing ones).
 
-- Memory leaks are not allowed. To check them you can use
-  utils/heap_help tool. Showing zero leak reports from Valgrind or
-  ASAN is not enough - they often miss the leaks.
+- Memory leaks are not allowed. To check them you can build with
+  the cmake option `ENABLE_LEAK_CHECKS`. Showing zero leak reports
+  from Valgrind or ASAN is not enough - they often miss the leaks.
 
 - You should not use sleep()/usleep() or any similar function
   anywhere. All waiting for anything has to be done using epoll or
@@ -113,7 +113,10 @@ I am client-2!          I am client-2!          I am client-2!
   memory.
 
 - Can use abort() for critical errors like when an epoll or socket
-  descriptor couldn't be created, or malloc() fails.
+  descriptor couldn't be created.
+
+- You can assume, that memory allocation functions like
+  new/delete/malloc()/realloc()/calloc() never fail.
 
 - You can store output buffer in any format. For example, copy
   each message passed to feed() and store those in a list. Or copy
@@ -127,7 +130,7 @@ I am client-2!          I am client-2!          I am client-2!
 
 ----------------------- Possible solutions -----------------------
 
-- 15 points: implement all functions from all .h and .c files,
+- 15 points: implement all functions from all .h and .cpp files,
   like described above and in the files (except optional ones,
   from the bonus sections below).
 
@@ -144,7 +147,7 @@ I am client-2!          I am client-2!          I am client-2!
 
 - +5 points: implement server's messages - the function
   chat_server_feed(). It is already defined in chat_server.h and
-  .c files. If doing this, you need to define the macro
+  .cpp files. If doing this, you need to define the macro
   NEED_SERVER_FEED.
 
   Server messages are broadcast to all clients. If you did the
