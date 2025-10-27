@@ -19,14 +19,10 @@ test_new(void)
 		   "negative thread count is forbidden");
 
 	unit_check(thread_pool_new(1, &p) == 0, "1 max thread is allowed");
-	unit_check(thread_pool_thread_count(p) == 0,
-		   "0 active threads after creation");
 	unit_check(thread_pool_delete(p) == 0, "delete without tasks");
 
 	unit_check(thread_pool_new(TPOOL_MAX_THREADS, &p) == 0,
 		   "max thread count is allowed");
-	unit_check(thread_pool_thread_count(p) == 0,
-		   "0 active threads after creation");
 	unit_check(thread_pool_delete(p) == 0, "delete");
 
 	unit_test_finish();
@@ -77,13 +73,11 @@ test_push(void)
 	 */
 	unit_check(thread_task_join(t) == 0, "joined");
 	unit_check(arg == 1, "the task really did something");
-	unit_check(thread_pool_thread_count(p) == 1, "one active thread");
 	/*
 	 * Re-push.
 	 */
 	unit_check(thread_pool_push_task(p, t) == 0, "pushed again");
 	unit_check(thread_task_join(t) == 0, "joined");
-	unit_check(thread_pool_thread_count(p) == 1, "still one active thread");
 	unit_check(thread_task_delete(t) == 0, "deleted after join");
 	/*
 	 * Work starts after push, it isn't blocked on join.

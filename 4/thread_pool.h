@@ -42,27 +42,17 @@ enum thread_pool_errcode {
 /** Thread pool API. */
 
 /**
- * Create a new thread pool with maximum @a max_thread_count
- * threads.
- * @param max_thread_count Maximum pool size.
+ * Create a new thread pool with the @a thread_count thread.
+ * @param thread_count Pool size.
  * @param[out] Pointer to store result pool object.
  *
  * @retval 0 Success.
  * @retval != 0 Error code.
- *     - TPOOL_ERR_INVALID_ARGUMENT - max_thread_count is too big,
+ *     - TPOOL_ERR_INVALID_ARGUMENT - thread_count is too big,
  *       or 0.
  */
 int
-thread_pool_new(int max_thread_count, struct thread_pool **pool);
-
-/**
- * How many threads are created by this pool. Can be less than
- * max.
- * @param pool Thread pool to get thread count of.
- * @retval Thread count.
- */
-int
-thread_pool_thread_count(const struct thread_pool *pool);
+thread_pool_new(int thread_count, struct thread_pool **pool);
 
 /**
  * Delete @a pool, free its memory.

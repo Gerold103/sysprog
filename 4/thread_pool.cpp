@@ -1,4 +1,5 @@
 #include "thread_pool.h"
+
 #include <pthread.h>
 
 struct thread_task {
@@ -8,24 +9,16 @@ struct thread_task {
 };
 
 struct thread_pool {
-	pthread_t *threads;
+	std::vector<pthread_t> threads;
 
 	/* PUT HERE OTHER MEMBERS */
 };
 
 int
-thread_pool_new(int max_thread_count, struct thread_pool **pool)
+thread_pool_new(int thread_count, struct thread_pool **pool)
 {
 	/* IMPLEMENT THIS FUNCTION */
-	(void)max_thread_count;
-	(void)pool;
-	return TPOOL_ERR_NOT_IMPLEMENTED;
-}
-
-int
-thread_pool_thread_count(const struct thread_pool *pool)
-{
-	/* IMPLEMENT THIS FUNCTION */
+	(void)thread_count;
 	(void)pool;
 	return TPOOL_ERR_NOT_IMPLEMENTED;
 }
