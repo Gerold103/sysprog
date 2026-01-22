@@ -17,18 +17,21 @@ score=0
 output=''
 
 if [ "$hw" -eq 1 ]; then
-	cp $RESOURCES_DIR_MOUNT/"$hw"/test.c /sysprog/solution
-	cp $RESOURCES_DIR_MOUNT/"$hw"/libcoro.c /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/"$hw"/test.cpp /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/"$hw"/libcoro.cpp /sysprog/solution
 	cp $RESOURCES_DIR_MOUNT/"$hw"/libcoro.h /sysprog/solution
-	cp $RESOURCES_DIR_MOUNT/"$hw"/Makefile /sysprog/solution
-	rm -f /sysprog/solution/libcoro_test.c
+	cp $RESOURCES_DIR_MOUNT/"$hw"/CMakeLists.txt /sysprog/solution
+	rm -f /sysprog/solution/libcoro_test.cpp
 	cd /sysprog/solution
 
 	echo '🔨 Building'
-	make test_glob
+	mkdir build
+	cd build
+	cmake .. -DENABLE_GLOB_SEARCH=1 -DENABLE_LEAK_CHECKS=1
+	make -j
 
 	echo '⏳ Running tests'
-	if output=$(./test 2>&1); then
+	if output=$(HHBACKTRACE=off ./test 2>&1); then
 		status='"OK"'
 		score=$(./test --max_points)
 	fi
