@@ -37,25 +37,30 @@ if [ "$hw" -eq 1 ]; then
 	fi
 elif [ "$hw" -eq 2 ]; then
 	cp $RESOURCES_DIR_MOUNT/"$hw"/checker.py /sysprog/solution
-	cp $RESOURCES_DIR_MOUNT/"$hw"/Makefile /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/"$hw"/CMakeLists.txt /sysprog/solution
 	cp $RESOURCES_DIR_MOUNT/"$hw"/tests.txt /sysprog/solution
-	rm /sysprog/solution/parser_test.c
+	rm /sysprog/solution/parser_test.cpp
 	cd /sysprog/solution
 
 	echo '🔨 Building'
-	make test_glob
+	mkdir build
+	cd build
+	cmake .. -DENABLE_GLOB_SEARCH=1 -DENABLE_LEAK_CHECKS=1
+	make -j
+	cd ..
+	mybash='./build/mybash'
 
 	echo '⏳ Running tests'
-	if output=$(python3 checker.py --with_logic 1 --with_background 1 -e ./mybash 2>&1); then
+	if output=$(python3 checker.py --with_logic 1 --with_background 1 -e $mybash 2>&1); then
 		status='"OK"'
 		score="25"
-	elif output=$(python3 checker.py --with_logic 1 -e ./mybash 2>&1); then
+	elif output=$(python3 checker.py --with_logic 1 -e .$mybash 2>&1); then
 		status='"OK"'
 		score="20"
-	elif output=$(python3 checker.py --with_background 1 -e ./mybash 2>&1); then
+	elif output=$(python3 checker.py --with_background 1 -e $mybash 2>&1); then
 		status='"OK"'
 		score="20"
-	elif output=$(python3 checker.py -e ./mybash 2>&1); then
+	elif output=$(python3 checker.py -e $mybash 2>&1); then
 		status='"OK"'
 		score="15"
 	fi
