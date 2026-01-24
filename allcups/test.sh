@@ -65,13 +65,16 @@ elif [ "$hw" -eq 2 ]; then
 		score="15"
 	fi
 elif [ "$hw" -eq 3 ] || [ "$hw" -eq 4 ] || [ "$hw" -eq 5 ]; then
-	cp $RESOURCES_DIR_MOUNT/"$hw"/test.c /sysprog/solution
-	cp $RESOURCES_DIR_MOUNT/"$hw"/Makefile /sysprog/solution
-	rm -f /sysprog/solution/*_exe.c
+	cp $RESOURCES_DIR_MOUNT/"$hw"/test.cpp /sysprog/solution
+	cp $RESOURCES_DIR_MOUNT/"$hw"/CMakeLists.txt /sysprog/solution
+	rm -f /sysprog/solution/*_exe.cpp
 	cd /sysprog/solution
 
 	echo '🔨 Building'
-	make test_glob
+	mkdir build
+	cd build
+	cmake .. -DENABLE_GLOB_SEARCH=1 -DENABLE_LEAK_CHECKS=1
+	make -j
 
 	echo '⏳ Running tests'
 	if output=$(./test 2>&1); then
