@@ -80,13 +80,16 @@ this:
   just do 'while (!task->is_finished) {usleep(1)};'. For waiting
   on anything you need to use pthread_cond_t.
 
+- You can not use `malloc()`, `realloc()`, `calloc()`, and so on.
+  You can only use `new` and `delete` from C++.
+
 -------------------------- Relaxations ---------------------------
 
 - There is no limit on the number of mutexes and condvars. You
   can even store them in each task.
 
-- You can assume, that memory allocation functions like
-  new/delete/malloc()/realloc()/calloc() never fail.
+- You can assume, that memory allocation functions `new` and
+  `delete` never fail.
 
 ----------------------- Possible solutions -----------------------
 

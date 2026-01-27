@@ -104,6 +104,9 @@ I am client-2!          I am client-2!          I am client-2!
   have zero warnings/errors. Alternatively you can try to use
   cmake, but then need to keep all the same compiler options.
 
+- You can not use `malloc()`, `realloc()`, `calloc()`, and so on.
+  You can only use `new` and `delete` from C++.
+
 -------------------------- Relaxations ---------------------------
 
 - Can assume message queues are always small enough to fit into
@@ -115,8 +118,8 @@ I am client-2!          I am client-2!          I am client-2!
 - Can use abort() for critical errors like when an epoll or socket
   descriptor couldn't be created.
 
-- You can assume, that memory allocation functions like
-  new/delete/malloc()/realloc()/calloc() never fail.
+- You can assume, that memory allocation functions `new` and
+  `delete` never fail.
 
 - You can store output buffer in any format. For example, copy
   each message passed to feed() and store those in a list. Or copy
