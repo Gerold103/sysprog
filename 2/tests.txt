@@ -211,6 +211,22 @@ cat test.txt
 Text
 ----# }
 
+----# Test { same non-idempotent commands --------------------------------------
+rm test.txt
+printf "with open('test.txt', 'a') as myfile:\n\
+    myfile.write('a\\\\n')\n\
+" > test.py
+
+python3 test.py | python3 test.py | python3 test.py | python3 test.py
+
+cat test.txt
+----# Output
+a
+a
+a
+a
+----# }
+
 ######## Section bonus logical operators
 
 ----# Test { basic and false ---------------------------------------------------
