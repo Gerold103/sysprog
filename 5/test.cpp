@@ -570,7 +570,8 @@ test_big_author(void)
 	std::string body(body_len + 1, 'm');
 	body.back() = '\n';
 
-	unit_check(chat_client_feed(c1, body, body_len + 1) == 0, "feed to client");
+	unit_check(chat_client_feed(c1, body.data(), body_len + 1) == 0,
+		   "feed to client");
 	struct chat_message *msg = server_pop_next_blocking_from(s, c1);
 	unit_check(msg != NULL, "server got msg");
 	body.resize(body_len);
