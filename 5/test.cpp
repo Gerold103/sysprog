@@ -398,6 +398,7 @@ test_multi_client(void)
 	unit_msg("Check all is delivered");
 	test_msg_clear_id(test_msg);
 	int *msg_counts = new int[client_count];
+	memset(msg_counts, 0, sizeof(*msg_counts) * client_count);
 	for (int i = 0, end = msg_count * client_count; i < end; ++i) {
 		msg = chat_server_pop_next(s);
 		unit_fail_if(msg == NULL);
@@ -508,6 +509,7 @@ test_stress(void)
 		unit_fail_if(rc != 0);
 	}
 	int *msg_counts = new int[client_count];
+	memset(msg_counts, 0, sizeof(*msg_counts) * client_count);
 	struct test_msg *test_msg = test_msg_new(ctx.msg_len);
 	unit_msg("Receive all messages");
 	for (int i = 0, end = ctx.msg_count * client_count; i < end; ++i) {
