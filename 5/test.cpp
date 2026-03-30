@@ -3,6 +3,7 @@
 #include "chat_client.h"
 #include "chat_server.h"
 
+#include <assert.h>
 #include <arpa/inet.h>
 #include <new>
 #include <pthread.h>
@@ -19,6 +20,17 @@ struct test_msg {
 	char *data;
 };
 
+static size_t
+round_up(size_t original, std::align_val_t alignment)
+{
+	size_t mult = static_cast<size_t>(alignment);
+	assert(mult != 0);
+	size_t rest = original % mult;
+	if (rest == 0)
+		return original;
+	return original + mult - rest;
+}
+
 static struct test_msg *
 test_msg_new(uint32_t len)
 {
@@ -26,7 +38,10 @@ test_msg_new(uint32_t len)
 	uint32_t size = len + 1;
 	test_msg *res;
 	constexpr std::align_val_t alignment{alignof(test_msg)};
-	uint8_t *blob = new (alignment) uint8_t[sizeof(*res) + size];
+	// Make sure the required memory size is a multiple of the alignment.
+	// This is the standard's requirement for aligned alloc functions.
+	size_t mem_size = round_up(sizeof(*res) + size, alignment);
+	uint8_t *blob = new (alignment) uint8_t[mem_size];
 	res = (test_msg *)blob;
 	res->data = (char *)(res + 1);
 	res->len = len;
